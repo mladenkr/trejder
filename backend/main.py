@@ -273,7 +273,7 @@ async def lifespan(app: FastAPI):
     
     try:
         # Initialize database connection
-        logger.info("📊 Connecting to Supabase database...")
+        logger.info("📊 Connecting to Railway PostgreSQL database...")
         database_url = os.environ.get('DATABASE_URL')
         railway_env = os.environ.get('RAILWAY_ENVIRONMENT')
         
@@ -287,7 +287,7 @@ async def lifespan(app: FastAPI):
         
         db_connected = await trading_state["database_service"].connect()
         if db_connected:
-            logger.info("✅ Connected to Supabase database successfully")
+            logger.info("✅ Connected to Railway PostgreSQL database successfully")
             await trading_state["database_service"].log_system_event(
                 "INFO", "startup", "Trading bot started successfully"
             )
@@ -671,7 +671,7 @@ async def get_connection_status():
 @app.get("/api/test-database")
 async def test_database_connection():
     """Test database connection endpoint for Railway debugging"""
-    import asyncpg
+    import aiomysql
     
     database_url = os.environ.get('DATABASE_URL')
     railway_env = os.environ.get('RAILWAY_ENVIRONMENT')
@@ -682,7 +682,8 @@ async def test_database_connection():
         "database_url_format": database_url[:30] + "..." + database_url[-20:] if database_url and len(database_url) > 50 else database_url,
         "connection_test": None,
         "error": None,
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now().isoformat(),
+        "database_type": "MySQL/PlanetScale"
     }
     
     if not database_url:
@@ -691,13 +692,39 @@ async def test_database_connection():
         return result
     
     try:
+        # Parse MySQL URL for connection test
+        url_parts = database_url.replace('mysql://', '').split('/')
+        auth_host = url_parts[0]
+        database = url_parts[1].split('?')[0]
+        
+        auth, host_port = auth_host.split('@')
+        username, password = auth.split(':')
+        
+        if ':' in host_port:
+            host, port = host_port.split(':')
+            port = int(port)
+        else:
+            host = host_port
+            port = 3306
+        
         # Test connection
-        conn = await asyncpg.connect(database_url, timeout=10)
-        version = await conn.fetchval('SELECT version()')
-        await conn.close()
+        conn = await aiomysql.connect(
+            host=host,
+            port=port,
+            user=username,
+            password=password,
+            db=database,
+            autocommit=True
+        )
+        
+        cursor = await conn.cursor()
+        await cursor.execute('SELECT VERSION()')
+        version = await cursor.fetchone()
+        await cursor.close()
+        conn.close()
         
         result["connection_test"] = True
-        result["postgresql_version"] = version[:50] + "..." if len(version) > 50 else version
+        result["mysql_version"] = version[0][:50] + "..." if len(version[0]) > 50 else version[0]
         
     except Exception as e:
         result["connection_test"] = False
