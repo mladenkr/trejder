@@ -159,28 +159,30 @@ async def update_market_data():
                     logger.info(f"💰 Current Balance - USDT: {usdt_balance}, BTC: {btc_balance}")
 
                     if action == 'BUY' and usdt_balance > 0:
-                        # Calculate quantity based on USDT balance
-                        raw_quantity = (usdt_balance * 0.95) / price  # Use 95% of balance
-                        quantity = round(raw_quantity, 6)  # MEXC requires max 6 decimal places
+                        # For MARKET BUY orders, use USDT amount (quoteOrderQty) instead of BTC quantity
+                        usdt_amount = round(usdt_balance * 0.95, 2)  # Use 95% of balance, round to 2 decimals
                         
-                        # Check minimum order size (0.000001 BTC minimum on MEXC)
-                        if quantity < 0.000001:
-                            logger.warning(f"⚠️ Order quantity {quantity} below minimum (0.000001 BTC). USDT balance: {usdt_balance}")
+                        # Check minimum order value (MEXC minimum is usually $10)
+                        if usdt_amount < 10:
+                            logger.warning(f"⚠️ BUY order value ${usdt_amount} below minimum ($10). USDT balance: {usdt_balance}")
                             continue
                         
-                        logger.info(f"📊 BUY Order Details - Raw: {raw_quantity}, Rounded: {quantity}, Price: {price}, Value: ${quantity * price:.2f}")
+                        logger.info(f"📊 BUY Order Details - USDT Amount: ${usdt_amount}, Price: {price}, Expected BTC: {usdt_amount/price:.6f}")
                         
-                        # Use MARKET order for immediate execution
-                        order = trading_state["mexc_service"].place_order('BUY', quantity, order_type='MARKET')
+                        # Use MARKET order with quoteOrderQty (USDT amount)
+                        order = trading_state["mexc_service"].place_order('BUY', quantity=0, order_type='MARKET', quote_qty=usdt_amount)
                         logger.info(f"✅ BUY ORDER PLACED: {order}")
+                        
+                        # Calculate the actual BTC quantity received
+                        btc_quantity = usdt_amount / price
                         
                         # Log trade to database
                         await trading_state["database_service"].log_trade(
                             action="BUY",
                             price=price,
-                            quantity=quantity,
+                            quantity=btc_quantity,
                             balance_before=usdt_balance + (btc_balance * price),
-                            balance_after=(usdt_balance * 0.05) + ((btc_balance + quantity) * price),
+                            balance_after=(usdt_balance * 0.05) + ((btc_balance + btc_quantity) * price),
                             order_id=order.get('orderId') if order else None,
                             metadata={"confidence": confidence, "indicators": indicators}
                         )
@@ -188,7 +190,7 @@ async def update_market_data():
                         trading_state["trades"].append({
                             "type": "BUY",
                             "price": price,
-                            "quantity": quantity,
+                            "quantity": btc_quantity,
                             "timestamp": datetime.now().isoformat()
                         })
                         trading_state["trading_strategy"].update_position('BUY')

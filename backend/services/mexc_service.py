@@ -63,27 +63,39 @@ class MexcService:
         endpoint = "/api/v3/account"
         return self._make_request('GET', endpoint, signed=True)
 
-    def place_order(self, side: str, quantity: float, price: Optional[float] = None, order_type: str = 'LIMIT') -> Dict:
+    def place_order(self, side: str, quantity: float, price: Optional[float] = None, order_type: str = 'LIMIT', quote_qty: Optional[float] = None) -> Dict:
         """
         Place a new order
         :param side: 'BUY' or 'SELL'
-        :param quantity: Order quantity
+        :param quantity: Order quantity (for SELL or LIMIT orders)
         :param price: Order price (required for LIMIT orders)
         :param order_type: 'LIMIT', 'MARKET', 'LIMIT_MAKER', 'IMMEDIATE_OR_CANCEL', 'FILL_OR_KILL'
+        :param quote_qty: Quote asset quantity (for MARKET BUY orders)
         """
         endpoint = "/api/v3/order"
         params = {
             'symbol': 'BTCUSDT',
             'side': side,
-            'type': order_type,
-            'quantity': quantity
+            'type': order_type
         }
         
         if order_type == 'LIMIT':
             if price is None:
                 raise ValueError("Price is required for LIMIT orders")
+            params['quantity'] = quantity
             params['price'] = price
             params['timeInForce'] = 'GTC'
+        elif order_type == 'MARKET':
+            if side == 'BUY':
+                # For MARKET BUY orders, use quoteOrderQty (USDT amount)
+                if quote_qty is not None:
+                    params['quoteOrderQty'] = quote_qty
+                else:
+                    # Fallback to quantity if no quote_qty provided
+                    params['quantity'] = quantity
+            else:
+                # For MARKET SELL orders, use quantity (BTC amount)
+                params['quantity'] = quantity
 
         return self._make_request('POST', endpoint, params, signed=True)
 
