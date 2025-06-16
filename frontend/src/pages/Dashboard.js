@@ -30,6 +30,7 @@ function Dashboard() {
   const chartContainerRef = useRef(null);
   const chartRef = useRef(null);
   const indicatorSeriesRef = useRef({});
+  const [tradeHistory, setTradeHistory] = useState([]);
 
   // Initialize chart only once
   useEffect(() => {
@@ -81,6 +82,37 @@ function Dashboard() {
     }
   }, []);
 
+  // Fetch trade history
+  const fetchTradeHistory = async () => {
+    try {
+      const response = await axios.get(`${config.API_URL}/api/trading-history`);
+      if (response.data && Array.isArray(response.data)) {
+        setTradeHistory(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching trade history:', error);
+    }
+  };
+
+  // Add trading markers to chart
+  const addTradingMarkers = () => {
+    if (!chartRef.current || !tradeHistory.length) return;
+
+    const markers = tradeHistory.map(trade => {
+      const timestamp = new Date(trade.timestamp).getTime() / 1000;
+      return {
+        time: timestamp,
+        position: trade.type === 'BUY' ? 'belowBar' : 'aboveBar',
+        color: trade.type === 'BUY' ? '#26a69a' : '#ef5350',
+        shape: 'circle',
+        text: trade.type.charAt(0), // 'B' for BUY, 'S' for SELL
+        size: 1.5,
+      };
+    });
+
+    chartRef.current.candlestickSeries.setMarkers(markers);
+  };
+
   // Fetch data when interval changes
   useEffect(() => {
     const fetchChartData = async () => {
@@ -94,6 +126,9 @@ function Dashboard() {
         if (response.data && response.data.data && Array.isArray(response.data.data)) {
           chartRef.current.candlestickSeries.setData(response.data.data);
           addLog(`Chart updated with ${response.data.data.length} ${selectedInterval} candles`);
+          
+          // Add trading markers after chart data is loaded
+          addTradingMarkers();
         } else {
           addLog(`No chart data received for ${selectedInterval}`);
         }
@@ -104,7 +139,22 @@ function Dashboard() {
     };
 
     fetchChartData();
+    fetchTradeHistory();
   }, [selectedInterval]);
+
+  // Update markers when trade history changes
+  useEffect(() => {
+    addTradingMarkers();
+  }, [tradeHistory]);
+
+  // Periodically refresh trade history to catch new trades
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchTradeHistory();
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Helper functions for indicator calculations (defined early to avoid hoisting issues)
   const calculateSMA = (data, period) => {
