@@ -88,10 +88,59 @@ export const generateEncryptedCredentials = (username, password) => {
   };
 };
 
+// API Key storage functions
+export const saveApiCredentials = (apiKey, apiSecret) => {
+  try {
+    const credentials = {
+      apiKey: encrypt(apiKey, ENCRYPTION_KEY),
+      apiSecret: encrypt(apiSecret, ENCRYPTION_KEY),
+      timestamp: Date.now()
+    };
+    localStorage.setItem('mexcApiCredentials', btoa(JSON.stringify(credentials)));
+    return true;
+  } catch (error) {
+    console.error('Failed to save API credentials:', error);
+    return false;
+  }
+};
+
+export const loadApiCredentials = () => {
+  try {
+    const credentialsData = localStorage.getItem('mexcApiCredentials');
+    if (!credentialsData) return null;
+    
+    const credentials = JSON.parse(atob(credentialsData));
+    const decryptedApiKey = decrypt(credentials.apiKey, ENCRYPTION_KEY);
+    const decryptedApiSecret = decrypt(credentials.apiSecret, ENCRYPTION_KEY);
+    
+    if (!decryptedApiKey || !decryptedApiSecret) {
+      clearApiCredentials();
+      return null;
+    }
+    
+    return {
+      apiKey: decryptedApiKey,
+      apiSecret: decryptedApiSecret,
+      timestamp: credentials.timestamp
+    };
+  } catch (error) {
+    console.error('Failed to load API credentials:', error);
+    clearApiCredentials();
+    return null;
+  }
+};
+
+export const clearApiCredentials = () => {
+  localStorage.removeItem('mexcApiCredentials');
+};
+
 export default {
   validateCredentials,
   createSession,
   validateSession,
   destroySession,
-  generateEncryptedCredentials
+  generateEncryptedCredentials,
+  saveApiCredentials,
+  loadApiCredentials,
+  clearApiCredentials
 }; 

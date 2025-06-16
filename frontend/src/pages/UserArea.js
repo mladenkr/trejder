@@ -33,7 +33,7 @@ import axios from 'axios';
 import config from '../config';
 import Login from '../components/Login';
 import TradingPairSelector from '../components/TradingPairSelector';
-import { validateSession, destroySession } from '../utils/auth';
+import { validateSession, destroySession, saveApiCredentials, loadApiCredentials, clearApiCredentials } from '../utils/auth';
 import mexcApiService from '../services/mexcApi';
 
 function UserArea() {
@@ -73,11 +73,18 @@ function UserArea() {
     checkAuth();
   }, []);
 
-  // Fetch settings when authenticated
+  // Fetch settings and load API credentials when authenticated
   useEffect(() => {
     if (isAuthenticated) {
       fetchSettings();
       fetchAutoTradingStatus();
+      
+      // Load saved API credentials
+      const savedCredentials = loadApiCredentials();
+      if (savedCredentials) {
+        setApiKey(savedCredentials.apiKey);
+        setApiSecret(savedCredentials.apiSecret);
+      }
     }
   }, [isAuthenticated]);
 
@@ -105,9 +112,11 @@ function UserArea() {
 
   const handleLogout = () => {
     destroySession();
+    clearApiCredentials();
     setIsAuthenticated(false);
     setApiKey('');
     setApiSecret('');
+    setAccountBalance({ usdtBalance: 0, loading: false, error: null });
   };
 
   const handleSettingsChange = (event) => {
@@ -149,6 +158,11 @@ function UserArea() {
           loading: false,
           error: null
         });
+        
+        // Save API credentials when successfully validated
+        if (apiKey && apiSecret) {
+          saveApiCredentials(apiKey, apiSecret);
+        }
       } else {
         setAccountBalance({
           usdtBalance: 0,
@@ -290,7 +304,7 @@ function UserArea() {
                   />
                 </Grid>
                 <Grid item xs={12}>
-                  <Box sx={{ display: 'flex', gap: 2 }}>
+                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
                     <Button
                       variant="contained"
                       color={isTrading ? "error" : "success"}
@@ -300,6 +314,21 @@ function UserArea() {
                     >
                       {isTrading ? "Stop Trading" : "Start Trading"}
                     </Button>
+                    {(apiKey || apiSecret) && (
+                      <Button
+                        variant="outlined"
+                        color="warning"
+                        onClick={() => {
+                          clearApiCredentials();
+                          setApiKey('');
+                          setApiSecret('');
+                          setAccountBalance({ usdtBalance: 0, loading: false, error: null });
+                        }}
+                        size="small"
+                      >
+                        Clear API Keys
+                      </Button>
+                    )}
                     <Typography variant="body2" color="textSecondary" sx={{ alignSelf: 'center' }}>
                       Status: {isTrading ? 
                         <span style={{ color: '#4caf50', fontWeight: 'bold' }}>🟢 Active</span> : 
@@ -307,6 +336,11 @@ function UserArea() {
                       }
                     </Typography>
                   </Box>
+                  {(apiKey && apiSecret) && (
+                    <Typography variant="caption" color="success.main" sx={{ mt: 1, display: 'block' }}>
+                      ✓ API credentials are saved and will persist across page refreshes
+                    </Typography>
+                  )}
                 </Grid>
               </Grid>
             </CardContent>
