@@ -27,17 +27,11 @@ import DataFrequencyControl from '../components/DataFrequencyControl';
 import config from '../config';
 
 function Dashboard() {
-  const [apiKey, setApiKey] = useState('');
-  const [apiSecret, setApiSecret] = useState('');
-  const [isTrading, setIsTrading] = useState(false);
-  const [tradingStatus, setTradingStatus] = useState(null);
   const [logs, setLogs] = useState([]);
   const [selectedInterval, setSelectedInterval] = useState('1m');
   const [activeIndicators, setActiveIndicators] = useState([]);
-  const [autoTradingEnabled, setAutoTradingEnabled] = useState(false);
   const chartContainerRef = useRef(null);
   const chartRef = useRef(null);
-  const wsRef = useRef(null);
   const indicatorSeriesRef = useRef({});
 
   // Initialize chart only once

@@ -4,7 +4,7 @@ import { Box, Container } from '@mui/material';
 import Navbar from './components/Navbar';
 import Dashboard from './pages/Dashboard';
 import TradingHistory from './pages/TradingHistory';
-import Settings from './pages/Settings';
+import UserArea from './pages/UserArea';
 
 function App() {
   return (
@@ -15,7 +15,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/history" element={<TradingHistory />} />
-            <Route path="/settings" element={<Settings />} />
+            <Route path="/user-area" element={<UserArea />} />
           </Routes>
         </Container>
       </Box>

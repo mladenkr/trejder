@@ -27,9 +27,9 @@ function Navbar() {
           <Button
             color="inherit"
             component={RouterLink}
-            to="/settings"
+            to="/user-area"
           >
-            Settings
+            User Area
           </Button>
         </Box>
       </Toolbar>
