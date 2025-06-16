@@ -237,12 +237,16 @@ async def ai_analysis_task():
             
             # Log AI analysis to database
             ai_decision = analysis.get('ai_decision', {})
+            reasoning = ai_decision.get('reasoning', [])
+            # Convert reasoning list to string if needed
+            reasoning_str = '; '.join(reasoning) if isinstance(reasoning, list) else str(reasoning)
+            
             await trading_state["database_service"].log_ai_analysis(
                 current_price=current_price,
                 recommendation=ai_decision.get('action', 'HOLD'),
                 confidence=analysis.get('confidence_score', 0),
-                reasoning=ai_decision.get('reasoning', ''),
-                technical_indicators=analysis.get('technical_analysis', {}),
+                reasoning=reasoning_str,
+                technical_indicators=analysis.get('indicators', {}),
                 metadata=analysis
             )
             
