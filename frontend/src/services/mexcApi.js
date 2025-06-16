@@ -63,21 +63,26 @@ class MexcApiService {
         return {
           success: true,
           usdtBalance: usdtBalance ? parseFloat(usdtBalance.free) : 0,
-          allBalances: response.data.balances
+          totalUsdValue: response.data.total_usd_value || 0,
+          usdBreakdown: response.data.usd_breakdown || { usdt: 0, crypto: 0 },
+          allBalances: response.data.balances,
+          usdBalances: response.data.usd_balances || []
         };
       }
 
       return {
         success: false,
         error: 'Invalid response format',
-        usdtBalance: 0
+        usdtBalance: 0,
+        totalUsdValue: 0
       };
     } catch (error) {
       console.error('Error fetching account balance:', error);
       return {
         success: false,
         error: error.response?.data?.message || error.message,
-        usdtBalance: 0
+        usdtBalance: 0,
+        totalUsdValue: 0
       };
     }
   }

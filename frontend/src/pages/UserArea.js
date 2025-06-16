@@ -44,13 +44,15 @@ function UserArea() {
   const [autoTradingEnabled, setAutoTradingEnabled] = useState(false);
   const [accountBalance, setAccountBalance] = useState({
     usdtBalance: 0,
+    totalUsdValue: 0,
+    usdBreakdown: { usdt: 0, crypto: 0 },
     loading: false,
     error: null
   });
   const [settings, setSettings] = useState({
     trading_pair: 'BTCUSDT',
     timeframe: '1m',
-    balance_percentage: 50, // % of balance to use for trading
+    balance_percentage: 100, // % of balance to use for trading
     enable_indicators: true,
     rsi_period: 14,
     rsi_overbought: 70,
@@ -117,7 +119,7 @@ function UserArea() {
     setIsAuthenticated(false);
     setApiKey('');
     setApiSecret('');
-    setAccountBalance({ usdtBalance: 0, loading: false, error: null });
+    setAccountBalance({ usdtBalance: 0, totalUsdValue: 0, usdBreakdown: { usdt: 0, crypto: 0 }, loading: false, error: null });
   };
 
   const handleSettingsChange = (event) => {
@@ -142,6 +144,8 @@ function UserArea() {
     if (!apiKey || !apiSecret) {
       setAccountBalance({
         usdtBalance: 0,
+        totalUsdValue: 0,
+        usdBreakdown: { usdt: 0, crypto: 0 },
         loading: false,
         error: 'API credentials required'
       });
@@ -156,6 +160,8 @@ function UserArea() {
       if (result.success) {
         setAccountBalance({
           usdtBalance: result.usdtBalance,
+          totalUsdValue: result.totalUsdValue,
+          usdBreakdown: result.usdBreakdown,
           loading: false,
           error: null
         });
@@ -167,6 +173,8 @@ function UserArea() {
       } else {
         setAccountBalance({
           usdtBalance: 0,
+          totalUsdValue: 0,
+          usdBreakdown: { usdt: 0, crypto: 0 },
           loading: false,
           error: result.error
         });
@@ -175,6 +183,8 @@ function UserArea() {
       console.error('Error fetching balance:', error);
       setAccountBalance({
         usdtBalance: 0,
+        totalUsdValue: 0,
+        usdBreakdown: { usdt: 0, crypto: 0 },
         loading: false,
         error: 'Failed to fetch balance'
       });
@@ -457,7 +467,7 @@ function UserArea() {
                    <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                        <Typography variant="subtitle2">
-                         Account Balance (USDT)
+                         Total Account Balance (USD)
                        </Typography>
                        {apiKey && apiSecret && (
                          <Button
@@ -482,9 +492,17 @@ function UserArea() {
                          {accountBalance.error}
                        </Typography>
                      ) : (
-                       <Typography variant="h6" color="success.main">
-                         ${accountBalance.usdtBalance.toFixed(2)}
-                       </Typography>
+                       <Box>
+                         <Typography variant="h6" color="success.main">
+                           ${accountBalance.totalUsdValue.toFixed(2)}
+                         </Typography>
+                         {accountBalance.totalUsdValue > 0 && (
+                           <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
+                             USDT: ${accountBalance.usdBreakdown.usdt.toFixed(2)} | 
+                             Crypto: ${accountBalance.usdBreakdown.crypto.toFixed(2)}
+                           </Typography>
+                         )}
+                       </Box>
                      )}
                      {!apiKey && (
                        <Typography variant="caption" color="textSecondary">
@@ -502,7 +520,7 @@ function UserArea() {
                      value={settings.balance_percentage}
                      onChange={handleSettingsChange}
                      inputProps={{ min: 1, max: 100 }}
-                     helperText={`Using ${settings.balance_percentage}% of account balance for trading${accountBalance.usdtBalance > 0 ? ` (~$${(accountBalance.usdtBalance * settings.balance_percentage / 100).toFixed(2)})` : ''}`}
+                     helperText={`Using ${settings.balance_percentage}% of account balance for trading${accountBalance.totalUsdValue > 0 ? ` (~$${(accountBalance.totalUsdValue * settings.balance_percentage / 100).toFixed(2)})` : ''}`}
                    />
                  </Grid>
 

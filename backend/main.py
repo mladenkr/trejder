@@ -469,11 +469,55 @@ async def get_trading_performance():
         # Get trading stats from database
         db_stats = await trading_state["database_service"].get_trading_stats()
         
+        # Get real-time total account balance if API credentials are available
+        current_balance = trading_state.get("current_balance", 0)
+        current_price = trading_state.get("last_price", 0)
+        
+        # If trading is active and we have API credentials, fetch real-time balance
+        if (trading_state.get("is_trading", False) and 
+            trading_state.get("api_key") and 
+            trading_state.get("api_secret")):
+            try:
+                mexc_service = MexcService(trading_state["api_key"], trading_state["api_secret"])
+                balance = mexc_service.get_account_balance()
+                
+                # Calculate total account value (USDT + crypto holdings)
+                total_usd_value = 0
+                for asset_balance in balance.get('balances', []):
+                    asset = asset_balance['asset']
+                    free = float(asset_balance['free'])
+                    locked = float(asset_balance['locked'])
+                    total_asset = free + locked
+                    
+                    if total_asset > 0:
+                        if asset == 'USDT':
+                            total_usd_value += total_asset
+                        else:
+                            try:
+                                if asset == 'BTC':
+                                    btc_price = mexc_service.get_btc_price()
+                                    total_usd_value += total_asset * btc_price
+                                    current_price = btc_price  # Update current price
+                                else:
+                                    price_response = mexc_service._make_request('GET', '/api/v3/ticker/price', {'symbol': f'{asset}USDT'})
+                                    asset_price = float(price_response['price'])
+                                    total_usd_value += total_asset * asset_price
+                            except:
+                                pass  # Skip assets we can't price
+                
+                current_balance = total_usd_value
+                # Update the trading state with real-time balance
+                trading_state["current_balance"] = current_balance
+                trading_state["last_price"] = current_price
+                
+            except Exception as e:
+                logger.warning(f"Could not fetch real-time balance: {e}")
+        
         # Calculate performance metrics
         performance_data = {
             "initial_balance": trading_state.get("initial_balance", 0),
-            "current_balance": trading_state.get("current_balance", 0),
-            "current_price": trading_state.get("last_price", 0),
+            "current_balance": current_balance,
+            "current_price": current_price,
             "total_trades": len(trading_state.get("trades", [])),
             "database_stats": db_stats,
             "trading_started": trading_state.get("is_trading", False)
@@ -790,9 +834,54 @@ async def get_mexc_account_balance(credentials: TradingCredentials):
     try:
         mexc_service = MexcService(credentials.api_key, credentials.api_secret)
         balance = mexc_service.get_account_balance()
+        
+        # Calculate total account value in USD
+        total_usd_value = 0
+        usd_balances = []
+        
+        for asset_balance in balance.get('balances', []):
+            asset = asset_balance['asset']
+            free = float(asset_balance['free'])
+            locked = float(asset_balance['locked'])
+            total_asset = free + locked
+            
+            if total_asset > 0:
+                if asset == 'USDT':
+                    # USDT is already in USD
+                    usd_value = total_asset
+                else:
+                    # Get price for other assets in USDT
+                    try:
+                        if asset == 'BTC':
+                            btc_price = mexc_service.get_btc_price()
+                            usd_value = total_asset * btc_price
+                        else:
+                            # Try to get price for other assets
+                            price_response = mexc_service._make_request('GET', '/api/v3/ticker/price', {'symbol': f'{asset}USDT'})
+                            asset_price = float(price_response['price'])
+                            usd_value = total_asset * asset_price
+                    except:
+                        # If we can't get price, assume 0 value for now
+                        usd_value = 0
+                
+                total_usd_value += usd_value
+                usd_balances.append({
+                    'asset': asset,
+                    'free': str(free),
+                    'locked': str(locked),
+                    'total': str(total_asset),
+                    'usd_value': usd_value
+                })
+        
         return {
             "success": True,
-            "balances": balance.get('balances', [])
+            "balances": balance.get('balances', []),
+            "usd_balances": usd_balances,
+            "total_usd_value": total_usd_value,
+            "usd_breakdown": {
+                "usdt": next((b['usd_value'] for b in usd_balances if b['asset'] == 'USDT'), 0),
+                "crypto": total_usd_value - next((b['usd_value'] for b in usd_balances if b['asset'] == 'USDT'), 0)
+            }
         }
     except Exception as e:
         logger.error(f"Error fetching MEXC account balance: {e}")
