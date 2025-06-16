@@ -118,7 +118,7 @@ class TradingStrategy:
             return False, None, 0.0
             
         # Only trade if we have moderate confidence  
-        if confidence < 0.5:
+        if confidence < 0.3:
             return False, None, confidence
             
         # Don't trade if we're already in a position and signal is the same

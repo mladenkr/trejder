@@ -141,6 +141,10 @@ async def update_market_data():
 
             # Check if we should trade (only if auto trading is enabled)
             should_trade, action, confidence = trading_state["trading_strategy"].should_trade()
+            
+            # Debug logging for technical indicators
+            if trading_state["auto_trading_enabled"]:
+                logger.info(f"Technical Indicators - Action: {action}, Confidence: {confidence:.2f}, Should Trade: {should_trade}")
 
             if should_trade and trading_state["auto_trading_enabled"]:
                 # Get current balance
