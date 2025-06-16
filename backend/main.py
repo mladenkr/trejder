@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, WebSocket, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, Dict, List
+from contextlib import asynccontextmanager
 import json
 import asyncio
 from datetime import datetime
@@ -19,7 +20,7 @@ import time
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 # Enable CORS
 app.add_middleware(
@@ -271,13 +272,17 @@ async def ai_analysis_task():
         
         await asyncio.sleep(60)  # Analyze every minute
 
-@app.on_event("startup")
-async def startup_event():
-    """Start AI analysis and WebSocket connection automatically when server starts"""
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Modern FastAPI lifespan event handler"""
     global ai_analysis_task_ref
+    
+    # Startup
+    logger.info("🚀 Starting Bitcoin Trading Bot...")
     
     try:
         # Initialize database connection
+        logger.info("📊 Connecting to Supabase database...")
         db_connected = await trading_state["database_service"].connect()
         if db_connected:
             logger.info("✅ Connected to Supabase database successfully")
@@ -288,6 +293,7 @@ async def startup_event():
             logger.warning("⚠️ Database connection failed - continuing without database logging")
         
         # Start WebSocket connection for real-time data
+        logger.info("🔌 Connecting to MEXC WebSocket...")
         await mexc_ws_service.connect()
         
         # Subscribe to real-time BTC price updates
@@ -303,17 +309,17 @@ async def startup_event():
             logger.info("WebSocket connections established successfully")
         
     except Exception as e:
-        logger.error(f"Error setting up WebSocket connections: {e}")
-        logger.info("Application will continue with REST API only")
+        logger.error(f"Error setting up connections: {e}")
+        logger.info("Application will continue with limited functionality")
     
     if trading_state["auto_analysis_enabled"]:
         ai_analysis_task_ref = asyncio.create_task(ai_analysis_task())
-        logger.info("AI Analysis started automatically on server startup")
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Clean shutdown of background tasks"""
-    global ai_analysis_task_ref
+        logger.info("🤖 AI Analysis started automatically on server startup")
+    
+    yield  # Application runs here
+    
+    # Shutdown
+    logger.info("🛑 Shutting down Bitcoin Trading Bot...")
     
     # Log shutdown event
     try:
@@ -321,16 +327,17 @@ async def shutdown_event():
             "INFO", "shutdown", "Trading bot shutting down"
         )
         await trading_state["database_service"].disconnect()
-        logger.info("Database connection closed")
+        logger.info("📊 Database connection closed")
     except Exception as e:
         logger.error(f"Error during database shutdown: {e}")
     
     # Disconnect WebSocket
     await mexc_ws_service.disconnect()
+    logger.info("🔌 WebSocket connections closed")
     
     if ai_analysis_task_ref:
         ai_analysis_task_ref.cancel()
-        logger.info("AI Analysis task cancelled on server shutdown")
+        logger.info("🤖 AI Analysis task cancelled")
 
 @app.post("/api/start-trading")
 async def start_trading(credentials: TradingCredentials, background_tasks: BackgroundTasks):

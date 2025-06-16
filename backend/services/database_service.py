@@ -19,13 +19,20 @@ class DatabaseService:
             if not self.database_url:
                 logger.warning("DATABASE_URL not set - database features disabled")
                 return False
-                
+            
+            logger.info(f"Attempting to connect to database: {self.database_url[:50]}...")
+            
             self.pool = await asyncpg.create_pool(
                 self.database_url,
                 min_size=1,
                 max_size=10,
                 command_timeout=60
             )
+            
+            # Test the connection
+            async with self.pool.acquire() as conn:
+                version = await conn.fetchval('SELECT version()')
+                logger.info(f"Database connection successful: {version[:50]}...")
             
             # Create tables if they don't exist
             await self._create_tables()
@@ -34,6 +41,7 @@ class DatabaseService:
             
         except Exception as e:
             logger.error(f"Failed to connect to database: {e}")
+            logger.error(f"Database URL format: {self.database_url[:30]}...")
             return False
     
     async def disconnect(self):
