@@ -77,7 +77,7 @@ function UserArea() {
   useEffect(() => {
     if (isAuthenticated) {
       fetchSettings();
-      fetchAutoTradingStatus();
+      fetchAutoTradingStatus(); // This now also fetches trading status
       
       // Load saved API credentials
       const savedCredentials = loadApiCredentials();
@@ -101,6 +101,7 @@ function UserArea() {
     try {
       const response = await axios.get(`${config.API_URL}/api/auto-trading-status`);
       setAutoTradingEnabled(response.data.auto_trading_enabled);
+      setIsTrading(response.data.is_trading); // Also get trading status from same endpoint
     } catch (error) {
       console.error('Error fetching auto trading status:', error);
     }
