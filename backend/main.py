@@ -147,58 +147,76 @@ async def update_market_data():
                 logger.info(f"Technical Indicators - Action: {action}, Confidence: {confidence:.2f}, Should Trade: {should_trade}")
 
             if should_trade and trading_state["auto_trading_enabled"]:
-                # Get current balance
-                balance = trading_state["mexc_service"].get_account_balance()
-                usdt_balance = float(next((asset['free'] for asset in balance['balances'] if asset['asset'] == 'USDT'), 0))
-                btc_balance = float(next((asset['free'] for asset in balance['balances'] if asset['asset'] == 'BTC'), 0))
+                logger.info(f"🚀 ATTEMPTING TO EXECUTE TRADE: {action} at price {price}")
+                
+                try:
+                    # Get current balance
+                    balance = trading_state["mexc_service"].get_account_balance()
+                    usdt_balance = float(next((asset['free'] for asset in balance['balances'] if asset['asset'] == 'USDT'), 0))
+                    btc_balance = float(next((asset['free'] for asset in balance['balances'] if asset['asset'] == 'BTC'), 0))
+                    
+                    logger.info(f"💰 Current Balance - USDT: {usdt_balance}, BTC: {btc_balance}")
 
-                if action == 'BUY' and usdt_balance > 0:
-                    # Calculate quantity based on USDT balance
-                    quantity = (usdt_balance * 0.95) / price  # Use 95% of balance
-                    order = trading_state["mexc_service"].place_order('BUY', quantity, price=price)
-                    logger.info(f"Placed BUY order: {order}")
-                    
-                    # Log trade to database
-                    await trading_state["database_service"].log_trade(
-                        action="BUY",
-                        price=price,
-                        quantity=quantity,
-                        balance_before=usdt_balance + (btc_balance * price),
-                        balance_after=(usdt_balance * 0.05) + ((btc_balance + quantity) * price),
-                        order_id=order.get('orderId') if order else None,
-                        metadata={"confidence": confidence, "indicators": indicators}
-                    )
-                    
-                    trading_state["trades"].append({
-                        "type": "BUY",
-                        "price": price,
-                        "quantity": quantity,
-                        "timestamp": datetime.now().isoformat()
-                    })
-                    trading_state["trading_strategy"].update_position('BUY')
+                    if action == 'BUY' and usdt_balance > 0:
+                        # Calculate quantity based on USDT balance
+                        quantity = (usdt_balance * 0.95) / price  # Use 95% of balance
+                        logger.info(f"📊 BUY Order Details - Quantity: {quantity}, Price: {price}, Value: ${quantity * price:.2f}")
+                        
+                        # Use MARKET order for immediate execution
+                        order = trading_state["mexc_service"].place_order('BUY', quantity, order_type='MARKET')
+                        logger.info(f"✅ BUY ORDER PLACED: {order}")
+                        
+                        # Log trade to database
+                        await trading_state["database_service"].log_trade(
+                            action="BUY",
+                            price=price,
+                            quantity=quantity,
+                            balance_before=usdt_balance + (btc_balance * price),
+                            balance_after=(usdt_balance * 0.05) + ((btc_balance + quantity) * price),
+                            order_id=order.get('orderId') if order else None,
+                            metadata={"confidence": confidence, "indicators": indicators}
+                        )
+                        
+                        trading_state["trades"].append({
+                            "type": "BUY",
+                            "price": price,
+                            "quantity": quantity,
+                            "timestamp": datetime.now().isoformat()
+                        })
+                        trading_state["trading_strategy"].update_position('BUY')
 
-                elif action == 'SELL' and btc_balance > 0:
-                    order = trading_state["mexc_service"].place_order('SELL', btc_balance, price=price)
-                    logger.info(f"Placed SELL order: {order}")
+                    elif action == 'SELL' and btc_balance > 0:
+                        logger.info(f"📊 SELL Order Details - Quantity: {btc_balance}, Price: {price}, Value: ${btc_balance * price:.2f}")
+                        
+                        # Use MARKET order for immediate execution
+                        order = trading_state["mexc_service"].place_order('SELL', btc_balance, order_type='MARKET')
+                        logger.info(f"✅ SELL ORDER PLACED: {order}")
+                        
+                        # Log trade to database
+                        await trading_state["database_service"].log_trade(
+                            action="SELL",
+                            price=price,
+                            quantity=btc_balance,
+                            balance_before=usdt_balance + (btc_balance * price),
+                            balance_after=(usdt_balance + (btc_balance * price)),
+                            order_id=order.get('orderId') if order else None,
+                            metadata={"confidence": confidence, "indicators": indicators}
+                        )
+                        
+                        trading_state["trades"].append({
+                            "type": "SELL",
+                            "price": price,
+                            "quantity": btc_balance,
+                            "timestamp": datetime.now().isoformat()
+                        })
+                        trading_state["trading_strategy"].update_position('SELL')
                     
-                    # Log trade to database
-                    await trading_state["database_service"].log_trade(
-                        action="SELL",
-                        price=price,
-                        quantity=btc_balance,
-                        balance_before=usdt_balance + (btc_balance * price),
-                        balance_after=(usdt_balance + (btc_balance * price)),
-                        order_id=order.get('orderId') if order else None,
-                        metadata={"confidence": confidence, "indicators": indicators}
-                    )
-                    
-                    trading_state["trades"].append({
-                        "type": "SELL",
-                        "price": price,
-                        "quantity": btc_balance,
-                        "timestamp": datetime.now().isoformat()
-                    })
-                    trading_state["trading_strategy"].update_position('SELL')
+                    else:
+                        logger.warning(f"⚠️ Cannot execute {action} - USDT Balance: {usdt_balance}, BTC Balance: {btc_balance}")
+                        
+                except Exception as e:
+                    logger.error(f"❌ TRADE EXECUTION FAILED: {e}")
+                    logger.error(f"🔍 Error details: action={action}, price={price}, confidence={confidence}")
 
             # Update current balance
             balance = trading_state["mexc_service"].get_account_balance()
