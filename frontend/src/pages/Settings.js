@@ -14,6 +14,7 @@ import {
   FormControlLabel,
 } from '@mui/material';
 import axios from 'axios';
+import config from '../config';
 
 function Settings() {
   const [settings, setSettings] = useState({
@@ -35,7 +36,7 @@ function Settings() {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const response = await axios.get('http://localhost:8000/api/settings');
+        const response = await axios.get(`${config.API_URL}/api/settings`);
         setSettings(response.data);
       } catch (error) {
         console.error('Error fetching settings:', error);
@@ -55,7 +56,7 @@ function Settings() {
 
   const handleSave = async () => {
     try {
-      await axios.post('http://localhost:8000/api/settings', settings);
+      await axios.post(`${config.API_URL}/api/settings`, settings);
       alert('Settings saved successfully!');
     } catch (error) {
       console.error('Error saving settings:', error);

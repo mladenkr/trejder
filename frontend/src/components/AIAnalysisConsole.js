@@ -28,6 +28,7 @@ import {
 } from '@mui/icons-material';
 import axios from 'axios';
 import { format } from 'date-fns';
+import config from '../config';
 
 function AIAnalysisConsole() {
   const [isAnalysisRunning, setIsAnalysisRunning] = useState(true); // AI analysis runs by default
@@ -39,7 +40,7 @@ function AIAnalysisConsole() {
 
   // Define connectWebSocket BEFORE useEffect that uses it
   const connectWebSocket = useCallback(() => {
-    wsRef.current = new WebSocket('ws://localhost:8000/ws');
+    wsRef.current = new WebSocket(`${config.WS_URL}/ws`);
     
     wsRef.current.onmessage = (event) => {
       const data = JSON.parse(event.data);
@@ -78,7 +79,7 @@ function AIAnalysisConsole() {
 
   const checkAnalysisStatus = async () => {
     try {
-      const response = await axios.get('http://localhost:8000/api/ai-analysis-status');
+      const response = await axios.get(`${config.API_URL}/api/ai-analysis-status`);
       setIsAnalysisRunning(response.data.is_running);
       if (response.data.last_analysis) {
         setCurrentAnalysis(response.data.last_analysis);
@@ -90,7 +91,7 @@ function AIAnalysisConsole() {
 
   const startAnalysis = async () => {
     try {
-      await axios.post('http://localhost:8000/api/start-ai-analysis');
+      await axios.post(`${config.API_URL}/api/start-ai-analysis`);
       setIsAnalysisRunning(true);
     } catch (error) {
       console.error('Error starting AI analysis:', error);
@@ -99,7 +100,7 @@ function AIAnalysisConsole() {
 
   const stopAnalysis = async () => {
     try {
-      await axios.post('http://localhost:8000/api/stop-ai-analysis');
+      await axios.post(`${config.API_URL}/api/stop-ai-analysis`);
       setIsAnalysisRunning(false);
     } catch (error) {
       console.error('Error stopping AI analysis:', error);
@@ -108,7 +109,7 @@ function AIAnalysisConsole() {
 
   const runManualAnalysis = async () => {
     try {
-      const response = await axios.post('http://localhost:8000/api/manual-ai-analysis');
+      const response = await axios.post(`${config.API_URL}/api/manual-ai-analysis`);
       setCurrentAnalysis(response.data);
       setAnalysisHistory(prev => [...prev, response.data].slice(-50));
     } catch (error) {

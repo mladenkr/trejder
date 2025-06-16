@@ -24,6 +24,7 @@ import { format } from 'date-fns';
 import ChartIndicators from '../components/ChartIndicators';
 import AIAnalysisConsole from '../components/AIAnalysisConsole';
 import DataFrequencyControl from '../components/DataFrequencyControl';
+import config from '../config';
 
 function Dashboard() {
   const [apiKey, setApiKey] = useState('');
@@ -96,7 +97,7 @@ function Dashboard() {
       
       try {
         addLog(`Fetching ${selectedInterval} chart data...`);
-        const response = await axios.get(`http://localhost:8000/api/klines?interval=${selectedInterval}&limit=200`);
+        const response = await axios.get(`${config.API_URL}/api/klines?interval=${selectedInterval}&limit=200`);
         console.log('Chart data response:', response.data);
         
         if (response.data && response.data.data && Array.isArray(response.data.data)) {
@@ -590,7 +591,7 @@ function Dashboard() {
       if (!chartRef.current || activeIndicators.length === 0) return;
       
       try {
-        const response = await axios.get(`http://localhost:8000/api/klines?interval=${selectedInterval}&limit=200`);
+        const response = await axios.get(`${config.API_URL}/api/klines?interval=${selectedInterval}&limit=200`);
         if (response.data && response.data.data) {
           updateIndicators(response.data.data);
         }
@@ -622,7 +623,7 @@ function Dashboard() {
       if (!chartRef.current) return;
       
               try {
-          const response = await axios.get(`http://localhost:8000/api/klines?interval=${selectedInterval}&limit=200`);
+          const response = await axios.get(`${config.API_URL}/api/klines?interval=${selectedInterval}&limit=200`);
           if (response.data && response.data.data) {
             chartRef.current.candlestickSeries.setData(response.data.data);
             
@@ -642,7 +643,7 @@ function Dashboard() {
   useEffect(() => {
     if (isTrading) {
       // Connect to WebSocket
-      wsRef.current = new WebSocket('ws://localhost:8000/ws');
+      wsRef.current = new WebSocket(`${config.WS_URL}/ws`);
       
       wsRef.current.onmessage = (event) => {
         const data = JSON.parse(event.data);
@@ -759,7 +760,7 @@ function Dashboard() {
 
   const handleStartTrading = async () => {
     try {
-      await axios.post('http://localhost:8000/api/start-trading', {
+      await axios.post(`${config.API_URL}/api/start-trading`, {
         api_key: apiKey,
         api_secret: apiSecret
       });
@@ -772,7 +773,7 @@ function Dashboard() {
 
   const handleStopTrading = async () => {
     try {
-      await axios.post('http://localhost:8000/api/stop-trading');
+      await axios.post(`${config.API_URL}/api/stop-trading`);
       setIsTrading(false);
       addLog('Trading stopped');
     } catch (error) {
@@ -782,7 +783,7 @@ function Dashboard() {
 
   const handleStartAutoTrading = async () => {
     try {
-      await axios.post('http://localhost:8000/api/start-auto-trading');
+      await axios.post(`${config.API_URL}/api/start-auto-trading`);
       setAutoTradingEnabled(true);
       addLog('Auto trading started');
     } catch (error) {
@@ -792,7 +793,7 @@ function Dashboard() {
 
   const handlePauseAutoTrading = async () => {
     try {
-      await axios.post('http://localhost:8000/api/pause-auto-trading');
+      await axios.post(`${config.API_URL}/api/pause-auto-trading`);
       setAutoTradingEnabled(false);
       addLog('Auto trading paused');
     } catch (error) {
@@ -804,7 +805,7 @@ function Dashboard() {
   useEffect(() => {
     const fetchAutoTradingStatus = async () => {
       try {
-        const response = await axios.get('http://localhost:8000/api/auto-trading-status');
+        const response = await axios.get(`${config.API_URL}/api/auto-trading-status`);
         setAutoTradingEnabled(response.data.auto_trading_enabled);
       } catch (error) {
         console.error('Error fetching auto trading status:', error);

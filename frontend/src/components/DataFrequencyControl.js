@@ -17,6 +17,7 @@ import {
   CardContent
 } from '@mui/material';
 import { Speed, Timeline, TrendingUp, Wifi, WifiOff } from '@mui/icons-material';
+import config from '../config';
 
 const DataFrequencyControl = () => {
   const [settings, setSettings] = useState({
@@ -45,7 +46,7 @@ const DataFrequencyControl = () => {
     const interval = setInterval(fetchWebSocketStatus, 5000); // Check status every 5 seconds
     
     // Connect to WebSocket for live data updates
-    const ws = new WebSocket('ws://localhost:8000/ws');
+          const ws = new WebSocket(`${config.WS_URL}/ws`);
     
     ws.onmessage = (event) => {
       try {
@@ -74,7 +75,7 @@ const DataFrequencyControl = () => {
 
   const fetchWebSocketStatus = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/websocket-status');
+      const response = await fetch(`${config.API_URL}/api/websocket-status`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -103,7 +104,7 @@ const DataFrequencyControl = () => {
   const applySettings = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:8000/api/set-update-frequency', {
+      const response = await fetch(`${config.API_URL}/api/set-update-frequency`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

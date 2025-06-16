@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import axios from 'axios';
 import { format } from 'date-fns';
+import config from '../config';
 
 function TradingHistory() {
   const [trades, setTrades] = useState([]);
@@ -22,7 +23,7 @@ function TradingHistory() {
   useEffect(() => {
     const fetchTrades = async () => {
       try {
-        const response = await axios.get('http://localhost:8000/api/trading-history');
+        const response = await axios.get(`${config.API_URL}/api/trading-history`);
         setTrades(response.data);
       } catch (error) {
         console.error('Error fetching trading history:', error);
