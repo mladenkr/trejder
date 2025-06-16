@@ -20,16 +20,7 @@ import time
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(lifespan=lifespan)
-
-# Enable CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# We'll initialize the app after defining lifespan function
 
 # Store for active WebSocket connections
 active_connections: List[WebSocket] = []
@@ -283,6 +274,17 @@ async def lifespan(app: FastAPI):
     try:
         # Initialize database connection
         logger.info("📊 Connecting to Supabase database...")
+        database_url = os.environ.get('DATABASE_URL')
+        railway_env = os.environ.get('RAILWAY_ENVIRONMENT')
+        
+        logger.info(f"🌐 Environment: {railway_env or 'Local'}")
+        logger.info(f"🔗 Database URL configured: {'Yes' if database_url else 'No'}")
+        
+        if database_url:
+            # Log masked URL for debugging
+            masked_url = database_url[:30] + "..." + database_url[-20:] if len(database_url) > 50 else database_url
+            logger.info(f"🔍 Database URL format: {masked_url}")
+        
         db_connected = await trading_state["database_service"].connect()
         if db_connected:
             logger.info("✅ Connected to Supabase database successfully")
@@ -291,6 +293,10 @@ async def lifespan(app: FastAPI):
             )
         else:
             logger.warning("⚠️ Database connection failed - continuing without database logging")
+            if not database_url:
+                logger.error("❌ DATABASE_URL environment variable not set in Railway!")
+            else:
+                logger.error("❌ Database connection failed despite URL being configured")
         
         # Start WebSocket connection for real-time data
         logger.info("🔌 Connecting to MEXC WebSocket...")
@@ -338,6 +344,18 @@ async def lifespan(app: FastAPI):
     if ai_analysis_task_ref:
         ai_analysis_task_ref.cancel()
         logger.info("🤖 AI Analysis task cancelled")
+
+# Initialize FastAPI app with lifespan
+app = FastAPI(lifespan=lifespan)
+
+# Enable CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.post("/api/start-trading")
 async def start_trading(credentials: TradingCredentials, background_tasks: BackgroundTasks):
@@ -649,6 +667,44 @@ async def get_connection_status():
             "trading_impact": "No impact on trading functionality"
         } if mexc_ws_service.fallback_mode else None
     }
+
+@app.get("/api/test-database")
+async def test_database_connection():
+    """Test database connection endpoint for Railway debugging"""
+    import asyncpg
+    
+    database_url = os.environ.get('DATABASE_URL')
+    railway_env = os.environ.get('RAILWAY_ENVIRONMENT')
+    
+    result = {
+        "environment": railway_env or "Local",
+        "database_url_configured": bool(database_url),
+        "database_url_format": database_url[:30] + "..." + database_url[-20:] if database_url and len(database_url) > 50 else database_url,
+        "connection_test": None,
+        "error": None,
+        "timestamp": datetime.now().isoformat()
+    }
+    
+    if not database_url:
+        result["error"] = "DATABASE_URL environment variable not set"
+        result["connection_test"] = False
+        return result
+    
+    try:
+        # Test connection
+        conn = await asyncpg.connect(database_url, timeout=10)
+        version = await conn.fetchval('SELECT version()')
+        await conn.close()
+        
+        result["connection_test"] = True
+        result["postgresql_version"] = version[:50] + "..." if len(version) > 50 else version
+        
+    except Exception as e:
+        result["connection_test"] = False
+        result["error"] = str(e)
+        result["error_type"] = type(e).__name__
+    
+    return result
 
 # Removed candle aggregation endpoints - using real-time WebSocket data
 
