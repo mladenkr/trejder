@@ -144,7 +144,8 @@ async def update_market_data():
             
             # Debug logging for technical indicators
             if trading_state["auto_trading_enabled"]:
-                logger.info(f"Technical Indicators - Action: {action}, Confidence: {confidence:.2f}, Should Trade: {should_trade}")
+                logger.info(f"Technical Indicators (15m) - Action: {action}, Confidence: {confidence:.2f}, Should Trade: {should_trade}")
+                logger.info(f"DEBUG: Using klines data length: {len(klines)}, timeframe: 15m")
 
             if should_trade and trading_state["auto_trading_enabled"]:
                 logger.info(f"🚀 ATTEMPTING TO EXECUTE TRADE: {action} at price {price}")
