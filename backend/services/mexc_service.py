@@ -67,7 +67,7 @@ class MexcService:
         """
         Place a new order
         :param side: 'BUY' or 'SELL'
-        :param quantity: Order quantity (for SELL or LIMIT orders)
+        :param quantity: Order quantity
         :param price: Order price (required for LIMIT orders)
         :param order_type: 'LIMIT', 'MARKET', 'LIMIT_MAKER', 'IMMEDIATE_OR_CANCEL', 'FILL_OR_KILL'
         :param quote_qty: Quote asset quantity (for MARKET BUY orders)
@@ -79,23 +79,18 @@ class MexcService:
             'type': order_type
         }
         
+        # For MARKET BUY orders with quote_qty, use quoteOrderQty
+        if order_type == 'MARKET' and side == 'BUY' and quote_qty is not None:
+            params['quoteOrderQty'] = quote_qty
+        else:
+            # Default behavior for all other orders
+            params['quantity'] = quantity
+            
         if order_type == 'LIMIT':
             if price is None:
                 raise ValueError("Price is required for LIMIT orders")
-            params['quantity'] = quantity
             params['price'] = price
             params['timeInForce'] = 'GTC'
-        elif order_type == 'MARKET':
-            if side == 'BUY':
-                # For MARKET BUY orders, use quoteOrderQty (USDT amount)
-                if quote_qty is not None:
-                    params['quoteOrderQty'] = quote_qty
-                else:
-                    # Fallback to quantity if no quote_qty provided
-                    params['quantity'] = quantity
-            else:
-                # For MARKET SELL orders, use quantity (BTC amount)
-                params['quantity'] = quantity
 
         return self._make_request('POST', endpoint, params, signed=True)
 
