@@ -126,9 +126,9 @@ class TradingStrategy:
             buy_confidence = sum(buy_signals)
             sell_confidence = sum(sell_signals)
             
-            if buy_confidence > sell_confidence and buy_confidence > 0.5:
+            if buy_confidence > sell_confidence and buy_confidence > 0.3:
                 return 'BUY', buy_confidence
-            elif sell_confidence > buy_confidence and sell_confidence > 0.5:
+            elif sell_confidence > buy_confidence and sell_confidence > 0.3:
                 return 'SELL', sell_confidence
 
         return None, 0.0
