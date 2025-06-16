@@ -34,6 +34,7 @@ function AIAnalysisConsole() {
   const [isAnalysisRunning, setIsAnalysisRunning] = useState(true); // AI analysis runs by default
   const [analysisHistory, setAnalysisHistory] = useState([]);
   const [currentAnalysis, setCurrentAnalysis] = useState(null);
+  const [technicalIndicators, setTechnicalIndicators] = useState(null);
   const [autoScroll, setAutoScroll] = useState(true);
   const logContainerRef = useRef(null);
   const wsRef = useRef(null);
@@ -47,6 +48,8 @@ function AIAnalysisConsole() {
       if (data.type === 'ai_analysis') {
         setCurrentAnalysis(data.data);
         setAnalysisHistory(prev => [...prev, data.data].slice(-50)); // Keep last 50 analyses
+      } else if (data.type === 'trading_update') {
+        setTechnicalIndicators(data.data.indicators);
       }
     };
 
@@ -713,6 +716,136 @@ function AIAnalysisConsole() {
             </Card>
           </Grid>
         </Grid>
+      </Paper>
+
+      {/* Technical Indicators */}
+      <Paper sx={{ p: 1.5, mb: 2 }}>
+        <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, fontSize: '1rem' }}>
+          ⚙️ Technical Indicators
+          <Chip size="small" label="1m" color="warning" variant="outlined" sx={{ fontSize: '0.7rem', height: '20px' }} />
+          <Chip size="small" label="Live Trading" color="success" variant="outlined" sx={{ fontSize: '0.7rem', height: '20px' }} />
+        </Typography>
+        <Typography variant="caption" color="textSecondary" paragraph sx={{ fontSize: '0.75rem', mb: 1 }}>
+          Real-time technical analysis that controls actual trade execution (≥30% confidence needed).
+        </Typography>
+        
+        {technicalIndicators ? (
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={6}>
+              <Card sx={{ p: 1.5 }}>
+                <Typography variant="caption" gutterBottom sx={{ fontSize: '0.8rem', fontWeight: 'bold' }}>
+                  📊 Current Indicators
+                </Typography>
+                <Box sx={{ mt: 1 }}>
+                  <Typography variant="caption" component="div" sx={{ fontSize: '0.7rem', lineHeight: 1.4 }}>
+                    <strong>RSI:</strong> {technicalIndicators.rsi?.toFixed(2) || 'N/A'} 
+                    {technicalIndicators.rsi < 30 && ' 🟢 (Oversold +0.3)'}
+                    {technicalIndicators.rsi > 70 && ' 🔴 (Overbought +0.3)'}
+                    <br/>
+                    
+                    <strong>MACD:</strong> {technicalIndicators.macd?.toFixed(4) || 'N/A'} vs Signal: {technicalIndicators.macd_signal?.toFixed(4) || 'N/A'}
+                    {(technicalIndicators.macd > technicalIndicators.macd_signal) && ' 🟢 (Bullish +0.2)'}
+                    {(technicalIndicators.macd < technicalIndicators.macd_signal) && ' 🔴 (Bearish +0.2)'}
+                    <br/>
+                    
+                    <strong>Price:</strong> ${technicalIndicators.current_price?.toFixed(2) || 'N/A'}
+                    <br/>
+                    <strong>BB Lower:</strong> ${technicalIndicators.bb_low?.toFixed(2) || 'N/A'}
+                    {(technicalIndicators.current_price < technicalIndicators.bb_low) && ' 🟢 (Below BB +0.2)'}
+                    <br/>
+                    <strong>BB Upper:</strong> ${technicalIndicators.bb_high?.toFixed(2) || 'N/A'}
+                    {(technicalIndicators.current_price > technicalIndicators.bb_high) && ' 🔴 (Above BB +0.2)'}
+                    <br/>
+                    
+                    <strong>SMA20:</strong> ${technicalIndicators.sma_20?.toFixed(2) || 'N/A'}
+                    <br/>
+                    <strong>SMA50:</strong> ${technicalIndicators.sma_50?.toFixed(2) || 'N/A'}
+                    {(technicalIndicators.sma_20 > technicalIndicators.sma_50) && ' 🟢 (Uptrend +0.3)'}
+                    {(technicalIndicators.sma_20 < technicalIndicators.sma_50) && ' 🔴 (Downtrend +0.3)'}
+                  </Typography>
+                </Box>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Card sx={{ p: 1.5 }}>
+                <Typography variant="caption" gutterBottom sx={{ fontSize: '0.8rem', fontWeight: 'bold' }}>
+                  🎯 Trading Confidence
+                </Typography>
+                <Box sx={{ mt: 1 }}>
+                  {(() => {
+                    // Calculate confidence based on indicators
+                    let buyConfidence = 0;
+                    let sellConfidence = 0;
+                    
+                    if (technicalIndicators.rsi < 30) buyConfidence += 0.3;
+                    else if (technicalIndicators.rsi > 70) sellConfidence += 0.3;
+                    
+                    if (technicalIndicators.macd > technicalIndicators.macd_signal) buyConfidence += 0.2;
+                    else if (technicalIndicators.macd < technicalIndicators.macd_signal) sellConfidence += 0.2;
+                    
+                    if (technicalIndicators.current_price < technicalIndicators.bb_low) buyConfidence += 0.2;
+                    else if (technicalIndicators.current_price > technicalIndicators.bb_high) sellConfidence += 0.2;
+                    
+                    if (technicalIndicators.sma_20 > technicalIndicators.sma_50) buyConfidence += 0.3;
+                    else if (technicalIndicators.sma_20 < technicalIndicators.sma_50) sellConfidence += 0.3;
+                    
+                    const netConfidence = buyConfidence - sellConfidence;
+                    const action = netConfidence > 0 ? 'BUY' : netConfidence < 0 ? 'SELL' : 'HOLD';
+                    const confidence = Math.abs(netConfidence);
+                    const willTrade = confidence >= 0.3;
+                    
+                    return (
+                      <Box>
+                        <Typography variant="caption" component="div" sx={{ fontSize: '0.8rem', mb: 1 }}>
+                          <strong>Action:</strong> 
+                          <Chip 
+                            size="small" 
+                            label={action} 
+                            color={action === 'BUY' ? 'success' : action === 'SELL' ? 'error' : 'default'}
+                            sx={{ ml: 1, fontSize: '0.7rem', height: '20px' }}
+                          />
+                        </Typography>
+                        <Typography variant="caption" component="div" sx={{ fontSize: '0.8rem', mb: 1 }}>
+                          <strong>Confidence:</strong> {(confidence * 100).toFixed(1)}%
+                        </Typography>
+                        <Typography variant="caption" component="div" sx={{ fontSize: '0.8rem', mb: 1 }}>
+                          <strong>Will Trade:</strong> 
+                          <Chip 
+                            size="small" 
+                            label={willTrade ? 'YES' : 'NO'} 
+                            color={willTrade ? 'success' : 'error'}
+                            sx={{ ml: 1, fontSize: '0.7rem', height: '20px' }}
+                          />
+                        </Typography>
+                        <Typography variant="caption" component="div" sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>
+                          Need ≥30% confidence to execute trades
+                        </Typography>
+                        
+                        <Box sx={{ mt: 1.5 }}>
+                          <Typography variant="caption" sx={{ fontSize: '0.7rem', fontWeight: 'bold' }}>
+                            Signal Breakdown:
+                          </Typography>
+                          <Typography variant="caption" component="div" sx={{ fontSize: '0.65rem', mt: 0.5 }}>
+                            🟢 BUY Signals: {(buyConfidence * 100).toFixed(0)}%<br/>
+                            🔴 SELL Signals: {(sellConfidence * 100).toFixed(0)}%<br/>
+                            ⚖️ Net: {(netConfidence * 100).toFixed(0)}%
+                          </Typography>
+                        </Box>
+                      </Box>
+                    );
+                  })()}
+                </Box>
+              </Card>
+            </Grid>
+          </Grid>
+        ) : (
+          <Box sx={{ p: 2, textAlign: 'center' }}>
+            <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.75rem' }}>
+              Technical indicators will appear here when trading is active.<br/>
+              Start trading session in User Area to see real-time data.
+            </Typography>
+          </Box>
+        )}
       </Paper>
 
       {/* Signal Explanation */}
