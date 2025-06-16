@@ -162,9 +162,9 @@ async def update_market_data():
                         # For MARKET BUY orders, use USDT amount (quoteOrderQty) instead of BTC quantity
                         usdt_amount = round(usdt_balance * 0.95, 2)  # Use 95% of balance, round to 2 decimals
                         
-                        # Check minimum order value (MEXC minimum is usually $10)
-                        if usdt_amount < 10:
-                            logger.warning(f"⚠️ BUY order value ${usdt_amount} below minimum ($10). USDT balance: {usdt_balance}")
+                        # Check minimum order value (MEXC minimum is usually $5)
+                        if usdt_amount < 5:
+                            logger.warning(f"⚠️ BUY order value ${usdt_amount} below minimum ($5). USDT balance: {usdt_balance}")
                             continue
                         
                         logger.info(f"📊 BUY Order Details - USDT Amount: ${usdt_amount}, Price: {price}, Expected BTC: {usdt_amount/price:.6f}")
