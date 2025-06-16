@@ -414,13 +414,24 @@ async def start_trading(credentials: TradingCredentials, background_tasks: Backg
     
     try:
         # Initialize MEXC service
+        logger.info(f"🔑 Initializing MEXC service with API key: {credentials.api_key[:8]}...")
         mexc_service = MexcService(credentials.api_key, credentials.api_secret)
         
+        # Test connection first
+        logger.info("🧪 Testing MEXC API connection...")
+        test_price = mexc_service.get_btc_price()
+        logger.info(f"✅ MEXC connection successful. BTC Price: ${test_price}")
+        
         # Get initial balance
+        logger.info("💰 Fetching account balance...")
         balance = mexc_service.get_account_balance()
+        logger.info(f"📊 Account balance response: {balance}")
+        
         usdt_balance = float(next((asset['free'] for asset in balance['balances'] if asset['asset'] == 'USDT'), 0))
         btc_balance = float(next((asset['free'] for asset in balance['balances'] if asset['asset'] == 'BTC'), 0))
         initial_price = mexc_service.get_btc_price()
+        
+        logger.info(f"💵 USDT Balance: {usdt_balance}, BTC Balance: {btc_balance}, BTC Price: ${initial_price}")
         
         trading_state.update({
             "is_trading": True,
@@ -437,8 +448,19 @@ async def start_trading(credentials: TradingCredentials, background_tasks: Backg
         
         return {"status": "Trading started successfully"}
     except Exception as e:
-        logger.error(f"Error starting trading: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"❌ Error starting trading: {e}")
+        logger.error(f"🔍 Error type: {type(e).__name__}")
+        logger.error(f"📍 Error details: API Key length: {len(credentials.api_key)}, Secret length: {len(credentials.api_secret)}")
+        
+        # Provide more specific error messages
+        if "400" in str(e):
+            raise HTTPException(status_code=400, detail=f"MEXC API Error: {str(e)} - Check your API credentials")
+        elif "401" in str(e) or "403" in str(e):
+            raise HTTPException(status_code=400, detail="Invalid API credentials - Check your MEXC API key and secret")
+        elif "timeout" in str(e).lower():
+            raise HTTPException(status_code=500, detail="Connection timeout - Try again in a moment")
+        else:
+            raise HTTPException(status_code=500, detail=f"Trading start failed: {str(e)}")
 
 @app.post("/api/stop-trading")
 async def stop_trading():
