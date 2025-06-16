@@ -135,8 +135,8 @@ async def update_market_data():
             if update_market_data.price_log_counter % 10 == 0:
                 await trading_state["database_service"].log_price(price)
 
-            # Get klines for technical analysis
-            klines = trading_state["mexc_service"].get_klines(interval='1m', limit=100)
+            # Get klines for technical analysis (using 15m for consistency with AI analysis)
+            klines = trading_state["mexc_service"].get_klines(interval='15m', limit=100)
             indicators = trading_state["trading_strategy"].calculate_indicators(klines)
 
             # Check if we should trade (only if auto trading is enabled)

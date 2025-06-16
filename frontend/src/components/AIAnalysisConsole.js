@@ -722,7 +722,7 @@ function AIAnalysisConsole() {
       <Paper sx={{ p: 1.5, mb: 2 }}>
         <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, fontSize: '1rem' }}>
           ⚙️ Technical Indicators
-          <Chip size="small" label="1m" color="warning" variant="outlined" sx={{ fontSize: '0.7rem', height: '20px' }} />
+          <Chip size="small" label="15m" color="warning" variant="outlined" sx={{ fontSize: '0.7rem', height: '20px' }} />
           <Chip size="small" label="Live Trading" color="success" variant="outlined" sx={{ fontSize: '0.7rem', height: '20px' }} />
         </Typography>
         <Typography variant="caption" color="textSecondary" paragraph sx={{ fontSize: '0.75rem', mb: 1 }}>
