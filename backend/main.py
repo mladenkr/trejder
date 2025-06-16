@@ -480,8 +480,11 @@ async def get_trading_performance():
         }
         
         # Calculate performance percentages
-        if performance_data["initial_balance"] > 0:
-            total_return = ((performance_data["current_balance"] - performance_data["initial_balance"]) / performance_data["initial_balance"]) * 100
+        initial_balance = performance_data["initial_balance"] or 0
+        current_balance = performance_data["current_balance"] or 0
+        
+        if initial_balance > 0:
+            total_return = ((current_balance - initial_balance) / initial_balance) * 100
             performance_data["total_return_percent"] = round(total_return, 2)
         else:
             performance_data["total_return_percent"] = 0
@@ -531,25 +534,28 @@ async def get_trading_performance():
                     ''')
                     
                     # Calculate 24h performance
-                    if result_24h and result_24h['min_balance_24h'] and result_24h['max_balance_24h']:
+                    if result_24h and result_24h['min_balance_24h'] is not None and result_24h['max_balance_24h'] is not None and float(result_24h['min_balance_24h']) > 0:
                         performance_24h = ((float(result_24h['max_balance_24h']) - float(result_24h['min_balance_24h'])) / float(result_24h['min_balance_24h'])) * 100
                         performance_data["performance_24h"] = round(performance_24h, 2)
-                        performance_data["trades_24h"] = result_24h['trades_24h']
+                        performance_data["trades_24h"] = result_24h['trades_24h'] or 0
                     else:
                         performance_data["performance_24h"] = 0
-                        performance_data["trades_24h"] = 0
+                        performance_data["trades_24h"] = result_24h['trades_24h'] if result_24h else 0
                     
                     # Calculate 1 week performance
-                    if result_1w and result_1w['min_balance_1w'] and result_1w['max_balance_1w']:
+                    if result_1w and result_1w['min_balance_1w'] is not None and result_1w['max_balance_1w'] is not None and float(result_1w['min_balance_1w']) > 0:
                         performance_1w = ((float(result_1w['max_balance_1w']) - float(result_1w['min_balance_1w'])) / float(result_1w['min_balance_1w'])) * 100
                         performance_data["performance_1w"] = round(performance_1w, 2)
-                        performance_data["trades_1w"] = result_1w['trades_1w']
+                        performance_data["trades_1w"] = result_1w['trades_1w'] or 0
                     else:
                         performance_data["performance_1w"] = 0
-                        performance_data["trades_1w"] = 0
+                        performance_data["trades_1w"] = result_1w['trades_1w'] if result_1w else 0
                     
                     # Calculate overall performance from first to latest trade
-                    if first_trade and latest_trade and first_trade['balance_before'] and latest_trade['balance_after']:
+                    if (first_trade and latest_trade and 
+                        first_trade['balance_before'] is not None and 
+                        latest_trade['balance_after'] is not None and 
+                        float(first_trade['balance_before']) > 0):
                         overall_performance = ((float(latest_trade['balance_after']) - float(first_trade['balance_before'])) / float(first_trade['balance_before'])) * 100
                         performance_data["overall_performance"] = round(overall_performance, 2)
                         performance_data["trading_start_time"] = first_trade['start_time'].isoformat()
