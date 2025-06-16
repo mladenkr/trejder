@@ -1,6 +1,6 @@
 const config = {
-  API_URL: process.env.REACT_APP_API_URL || 'http://localhost:8000',
-  WS_URL: process.env.REACT_APP_WS_URL || 'ws://localhost:8000',
+  API_URL: process.env.REACT_APP_API_URL || 'https://trejder-production.up.railway.app',
+  WS_URL: process.env.REACT_APP_WS_URL || 'wss://trejder-production.up.railway.app',
 };
 
 // Debug: Log environment variables
