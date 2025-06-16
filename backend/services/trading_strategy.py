@@ -92,7 +92,6 @@ class TradingStrategy:
             return None, 0.0
 
         signals = []
-        confidence = 0.0
 
         # RSI Analysis
         if self.indicators['rsi'] < 30:
@@ -130,6 +129,12 @@ class TradingStrategy:
                 return 'BUY', buy_confidence
             elif sell_confidence > buy_confidence and sell_confidence > 0.3:
                 return 'SELL', sell_confidence
+            else:
+                # Return the higher confidence even if below threshold
+                if buy_confidence > sell_confidence:
+                    return 'BUY', buy_confidence
+                elif sell_confidence > 0:
+                    return 'SELL', sell_confidence
 
         return None, 0.0
 
