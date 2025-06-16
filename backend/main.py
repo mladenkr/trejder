@@ -646,6 +646,57 @@ async def get_websocket_status():
     }
     return status
 
+@app.get("/api/mexc/symbols")
+async def get_mexc_symbols():
+    """Get all trading symbols from MEXC"""
+    try:
+        mexc_service = MexcService("", "")  # Public data doesn't need auth
+        exchange_info = mexc_service.get_exchange_info()
+        return {
+            "success": True,
+            "symbols": exchange_info.get('symbols', [])
+        }
+    except Exception as e:
+        logger.error(f"Error fetching MEXC symbols: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch symbols: {str(e)}")
+
+@app.post("/api/mexc/account-balance")
+async def get_mexc_account_balance(credentials: TradingCredentials):
+    """Get account balance from MEXC using provided API credentials"""
+    try:
+        mexc_service = MexcService(credentials.api_key, credentials.api_secret)
+        balance = mexc_service.get_account_balance()
+        return {
+            "success": True,
+            "balances": balance.get('balances', [])
+        }
+    except Exception as e:
+        logger.error(f"Error fetching MEXC account balance: {e}")
+        raise HTTPException(status_code=400, detail=f"Failed to fetch balance: {str(e)}")
+
+@app.post("/api/mexc/test-connection")
+async def test_mexc_connection(credentials: TradingCredentials):
+    """Test MEXC API connection with provided credentials"""
+    try:
+        mexc_service = MexcService(credentials.api_key, credentials.api_secret)
+        # Try to get account info as a connection test
+        account_info = mexc_service.get_account_balance()
+        return {
+            "success": True,
+            "message": "Connection successful",
+            "account_type": account_info.get('accountType', 'SPOT'),
+            "can_trade": account_info.get('canTrade', False),
+            "can_withdraw": account_info.get('canWithdraw', False),
+            "can_deposit": account_info.get('canDeposit', False)
+        }
+    except Exception as e:
+        logger.error(f"Error testing MEXC connection: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "message": "Connection failed"
+        }
+
 @app.get("/api/connection-status")
 async def get_connection_status():
     """Get detailed connection status for troubleshooting"""
