@@ -81,17 +81,23 @@ class MexcService:
         
         # For MARKET BUY orders with quote_qty, use quoteOrderQty
         if order_type == 'MARKET' and side == 'BUY' and quote_qty is not None:
-            params['quoteOrderQty'] = quote_qty
+            params['quoteOrderQty'] = str(quote_qty)  # MEXC requires string format
         else:
             # Default behavior for all other orders
-            params['quantity'] = quantity
+            params['quantity'] = str(quantity)  # MEXC requires string format
             
         if order_type == 'LIMIT':
             if price is None:
                 raise ValueError("Price is required for LIMIT orders")
-            params['price'] = price
+            params['price'] = str(price)  # MEXC requires string format
             params['timeInForce'] = 'GTC'
 
+        # Debug logging for order parameters
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"🔍 MEXC Order Request - Endpoint: {endpoint}")
+        logger.info(f"🔍 MEXC Order Params: {params}")
+        
         return self._make_request('POST', endpoint, params, signed=True)
 
     def get_klines(self, interval: str = '1m', limit: int = 100) -> List:
