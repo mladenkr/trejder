@@ -953,9 +953,19 @@ async def get_mexc_account_balance(credentials: TradingCredentials):
 async def test_mexc_connection(credentials: TradingCredentials):
     """Test MEXC API connection with provided credentials"""
     try:
+        logger.info(f"🧪 Testing MEXC connection with API key: {credentials.api_key[:8]}...")
         mexc_service = MexcService(credentials.api_key, credentials.api_secret)
+        
+        # Test basic price endpoint first
+        logger.info("📊 Testing price endpoint...")
+        price = mexc_service.get_btc_price()
+        logger.info(f"✅ Price test successful: ${price}")
+        
         # Try to get account info as a connection test
+        logger.info("💰 Testing account balance endpoint...")
         account_info = mexc_service.get_account_balance()
+        logger.info(f"✅ Account test successful: {account_info.get('accountType', 'SPOT')}")
+        
         return {
             "success": True,
             "message": "Connection successful",
@@ -965,11 +975,18 @@ async def test_mexc_connection(credentials: TradingCredentials):
             "can_deposit": account_info.get('canDeposit', False)
         }
     except Exception as e:
-        logger.error(f"Error testing MEXC connection: {e}")
+        logger.error(f"❌ Error testing MEXC connection: {e}")
+        logger.error(f"🔍 Error type: {type(e).__name__}")
         return {
             "success": False,
             "error": str(e),
-            "message": "Connection failed"
+            "error_type": type(e).__name__,
+            "message": "Connection failed",
+            "debug_info": {
+                "api_key_length": len(credentials.api_key),
+                "api_secret_length": len(credentials.api_secret),
+                "api_key_prefix": credentials.api_key[:8] if len(credentials.api_key) >= 8 else "SHORT"
+            }
         }
 
 @app.get("/api/connection-status")
