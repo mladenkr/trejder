@@ -1,4 +1,4 @@
-# BTC Trading Bot
+# BTC Trading Bot (Trejder)
 
 A real-time Bitcoin trading bot that uses the MEXC exchange API for automated trading based on technical analysis.
 
@@ -22,8 +22,8 @@ A real-time Bitcoin trading bot that uses the MEXC exchange API for automated tr
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
-cd btc-trader
+git clone https://github.com/mladenkr/trejder.git
+cd trejder
 ```
 
 2. Set up the backend:
@@ -81,4 +81,4 @@ npm start
 
 ## Disclaimer
 
-This trading bot is for educational purposes only. Cryptocurrency trading involves significant risk. Use at your own risk and never trade with money you cannot afford to lose. 
+This trading bot is for educational purposes only. Cryptocurrency trading involves significant risk. Use at your own risk and never trade with money you cannot afford to lose.
