@@ -4,7 +4,6 @@ import {
   Grid,
   Paper,
   Typography,
-  TextField,
   Button,
   List,
   ListItem,
@@ -12,11 +11,8 @@ import {
   Divider,
 } from '@mui/material';
 import {
-  TrendingUp,
   Clear,
   Timeline,
-  PlayArrow,
-  Pause,
 } from '@mui/icons-material';
 import { createChart } from 'lightweight-charts';
 import axios from 'axios';
@@ -634,34 +630,7 @@ function Dashboard() {
     return () => clearInterval(chartUpdateInterval);
   }, [selectedInterval, activeIndicators, updateIndicators]);
 
-  useEffect(() => {
-    if (isTrading) {
-      // Connect to WebSocket
-      wsRef.current = new WebSocket(`${config.WS_URL}/ws`);
-      
-      wsRef.current.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        if (data.type === 'trading_update') {
-          setTradingStatus(data.data);
-          addLog(`Price update: $${data.data.last_price}`);
-          
-          // Update chart with new price data (only update, don't create new candles)
-          if (chartRef.current && data.data.last_price) {
-            // For real-time updates, we should only update the last candle
-            // Creating new candles every second would be incorrect
-            // The periodic update (every 30 seconds) will handle proper candle data
-            addLog(`Real-time price: $${data.data.last_price.toFixed(2)}`);
-          }
-        }
-      };
 
-      return () => {
-        if (wsRef.current) {
-          wsRef.current.close();
-        }
-      };
-    }
-  }, [isTrading]);
 
   const addLog = (message) => {
     setLogs(prev => [...prev, {
@@ -752,62 +721,7 @@ function Dashboard() {
     addLog('Chart drawings cleared');
   };
 
-  const handleStartTrading = async () => {
-    try {
-      await axios.post(`${config.API_URL}/api/start-trading`, {
-        api_key: apiKey,
-        api_secret: apiSecret
-      });
-      setIsTrading(true);
-      addLog('Trading started');
-    } catch (error) {
-      addLog(`Error starting trading: ${error.message}`);
-    }
-  };
 
-  const handleStopTrading = async () => {
-    try {
-      await axios.post(`${config.API_URL}/api/stop-trading`);
-      setIsTrading(false);
-      addLog('Trading stopped');
-    } catch (error) {
-      addLog(`Error stopping trading: ${error.message}`);
-    }
-  };
-
-  const handleStartAutoTrading = async () => {
-    try {
-      await axios.post(`${config.API_URL}/api/start-auto-trading`);
-      setAutoTradingEnabled(true);
-      addLog('Auto trading started');
-    } catch (error) {
-      addLog(`Error starting auto trading: ${error.message}`);
-    }
-  };
-
-  const handlePauseAutoTrading = async () => {
-    try {
-      await axios.post(`${config.API_URL}/api/pause-auto-trading`);
-      setAutoTradingEnabled(false);
-      addLog('Auto trading paused');
-    } catch (error) {
-      addLog(`Error pausing auto trading: ${error.message}`);
-    }
-  };
-
-  // Fetch auto trading status on component mount
-  useEffect(() => {
-    const fetchAutoTradingStatus = async () => {
-      try {
-        const response = await axios.get(`${config.API_URL}/api/auto-trading-status`);
-        setAutoTradingEnabled(response.data.auto_trading_enabled);
-      } catch (error) {
-        console.error('Error fetching auto trading status:', error);
-      }
-    };
-
-    fetchAutoTradingStatus();
-  }, []);
 
   return (
     <Box>
@@ -816,120 +730,6 @@ function Dashboard() {
       </Typography>
 
       <Grid container spacing={3}>
-        {/* Top Control Bar */}
-        <Grid item xs={12}>
-          <Paper sx={{ p: 2 }}>
-            <Grid container spacing={2} alignItems="center">
-              {/* API Configuration */}
-              <Grid item xs={12} md={4}>
-                <Typography variant="h6" gutterBottom>
-                  API Configuration
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                  <TextField
-                    size="small"
-                    label="API Key"
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    type="password"
-                    sx={{ flex: 1 }}
-                  />
-                  <TextField
-                    size="small"
-                    label="API Secret"
-                    value={apiSecret}
-                    onChange={(e) => setApiSecret(e.target.value)}
-                    type="password"
-                    sx={{ flex: 1 }}
-                  />
-                </Box>
-                <Button
-                  variant="contained"
-                  color={isTrading ? "error" : "primary"}
-                  onClick={isTrading ? handleStopTrading : handleStartTrading}
-                  startIcon={<TrendingUp />}
-                  size="small"
-                  fullWidth
-                >
-                  {isTrading ? "Stop Trading" : "Start Trading"}
-                </Button>
-              </Grid>
-
-              {/* Trading Status */}
-              <Grid item xs={12} md={4}>
-                <Typography variant="h6" gutterBottom>
-                  Trading Status
-                </Typography>
-                {tradingStatus && (
-                  <Grid container spacing={1}>
-                    <Grid item xs={4}>
-                      <Typography variant="caption">Current Price</Typography>
-                      <Typography variant="body2" fontWeight="bold">
-                        ${tradingStatus.last_price?.toFixed(2)}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={4}>
-                      <Typography variant="caption">Balance</Typography>
-                      <Typography variant="body2" fontWeight="bold">
-                        ${tradingStatus.current_balance?.toFixed(2)}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={4}>
-                      <Typography variant="caption">P/L</Typography>
-                      <Typography 
-                        variant="body2"
-                        fontWeight="bold"
-                        color={tradingStatus.current_balance > tradingStatus.initial_balance ? 'success.main' : 'error.main'}
-                      >
-                        ${(tradingStatus.current_balance - tradingStatus.initial_balance)?.toFixed(2)}
-                      </Typography>
-                    </Grid>
-                  </Grid>
-                )}
-              </Grid>
-
-              {/* Auto Trading Controls */}
-              <Grid item xs={12} md={4}>
-                <Typography variant="h6" gutterBottom>
-                  Auto Trading
-                </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  <Typography variant="caption" color="textSecondary">
-                    Status: {autoTradingEnabled ? 
-                      <span style={{ color: '#4caf50', fontWeight: 'bold' }}>🟢 Active</span> : 
-                      <span style={{ color: '#f44336', fontWeight: 'bold' }}>⏸️ Paused</span>
-                    }
-                  </Typography>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Button
-                      variant="contained"
-                      color="success"
-                      onClick={handleStartAutoTrading}
-                      disabled={autoTradingEnabled}
-                      startIcon={<PlayArrow />}
-                      size="small"
-                      sx={{ flex: 1 }}
-                    >
-                      Start
-                    </Button>
-                    <Button
-                      variant="contained"
-                      color="warning"
-                      onClick={handlePauseAutoTrading}
-                      disabled={!autoTradingEnabled}
-                      startIcon={<Pause />}
-                      size="small"
-                      sx={{ flex: 1 }}
-                    >
-                      Pause
-                    </Button>
-                  </Box>
-                </Box>
-              </Grid>
-            </Grid>
-          </Paper>
-        </Grid>
-
         {/* Chart */}
         <Grid item xs={12}>
           <Paper sx={{ p: 2 }}>
