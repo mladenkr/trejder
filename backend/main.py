@@ -7,6 +7,7 @@ import asyncio
 from datetime import datetime
 import websockets
 import logging
+import os
 from services.mexc_service import MexcService
 from services.trading_strategy import TradingStrategy
 from services.ai_analysis import AITradingAnalysis
@@ -239,10 +240,15 @@ async def startup_event():
         # Subscribe to real-time trade updates for immediate price changes
         await mexc_ws_service.subscribe_trade("BTCUSDT", handle_trade_update)
         
-        logger.info("WebSocket connections established successfully")
+        if mexc_ws_service.fallback_mode:
+            logger.info("MEXC WebSocket in fallback mode - using REST API polling")
+            logger.info("Data will be updated every 1-2 seconds instead of real-time")
+        else:
+            logger.info("WebSocket connections established successfully")
         
     except Exception as e:
         logger.error(f"Error setting up WebSocket connections: {e}")
+        logger.info("Application will continue with REST API only")
     
     if trading_state["auto_analysis_enabled"]:
         ai_analysis_task_ref = asyncio.create_task(ai_analysis_task())
@@ -531,7 +537,45 @@ async def handle_kline_update(data):
 @app.get("/api/websocket-status")
 async def get_websocket_status():
     """Get WebSocket connection status and data frequency info"""
-    return mexc_ws_service.get_status()
+    status = mexc_ws_service.get_status()
+    status["deployment_info"] = {
+        "platform": "Railway" if "RAILWAY_ENVIRONMENT" in os.environ else "Local",
+        "fallback_reason": "MEXC WebSocket blocked by hosting provider" if status["fallback_mode"] else None,
+        "performance_impact": "Minimal - REST API provides same data with 1-2s delay" if status["fallback_mode"] else None
+    }
+    return status
+
+@app.get("/api/connection-status")
+async def get_connection_status():
+    """Get detailed connection status for troubleshooting"""
+    try:
+        # Test MEXC REST API connectivity
+        mexc_service = MexcService("", "")
+        price = mexc_service.get_btc_price()
+        rest_api_working = True
+    except Exception as e:
+        price = None
+        rest_api_working = False
+        
+    return {
+        "rest_api": {
+            "working": rest_api_working,
+            "last_price": price,
+            "endpoint": "https://api.mexc.com/api/v3",
+            "error": str(e) if not rest_api_working else None
+        },
+        "websocket": mexc_ws_service.get_status(),
+        "server_info": {
+            "platform": "Railway" if "RAILWAY_ENVIRONMENT" in os.environ else "Local",
+            "timestamp": datetime.now().isoformat(),
+            "environment": dict(os.environ) if "RAILWAY_ENVIRONMENT" in os.environ else "Local development"
+        },
+        "recommendations": {
+            "fallback_mode": "Using REST API polling - performance impact is minimal",
+            "data_frequency": "1-2 seconds instead of real-time WebSocket",
+            "trading_impact": "No impact on trading functionality"
+        } if mexc_ws_service.fallback_mode else None
+    }
 
 # Removed candle aggregation endpoints - using real-time WebSocket data
 
