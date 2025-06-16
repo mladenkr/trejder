@@ -25,7 +25,7 @@ import config from '../config';
 
 function Dashboard() {
   const [logs, setLogs] = useState([]);
-  const [selectedInterval, setSelectedInterval] = useState('1m');
+  const [selectedInterval, setSelectedInterval] = useState('15m');
   const [activeIndicators, setActiveIndicators] = useState([]);
   const chartContainerRef = useRef(null);
   const chartRef = useRef(null);
