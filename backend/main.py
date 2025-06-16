@@ -462,6 +462,124 @@ async def get_trading_history():
     """Get trading history"""
     return trading_state["trades"]
 
+@app.get("/api/trading-performance")
+async def get_trading_performance():
+    """Get comprehensive trading performance metrics"""
+    try:
+        # Get trading stats from database
+        db_stats = await trading_state["database_service"].get_trading_stats()
+        
+        # Calculate performance metrics
+        performance_data = {
+            "initial_balance": trading_state.get("initial_balance", 0),
+            "current_balance": trading_state.get("current_balance", 0),
+            "current_price": trading_state.get("last_price", 0),
+            "total_trades": len(trading_state.get("trades", [])),
+            "database_stats": db_stats,
+            "trading_started": trading_state.get("is_trading", False)
+        }
+        
+        # Calculate performance percentages
+        if performance_data["initial_balance"] > 0:
+            total_return = ((performance_data["current_balance"] - performance_data["initial_balance"]) / performance_data["initial_balance"]) * 100
+            performance_data["total_return_percent"] = round(total_return, 2)
+        else:
+            performance_data["total_return_percent"] = 0
+        
+        # Get performance metrics from database for different time periods
+        if trading_state["database_service"].pool:
+            try:
+                async with trading_state["database_service"].pool.acquire() as conn:
+                    # Get 24h performance
+                    result_24h = await conn.fetchrow('''
+                        SELECT 
+                            MIN(balance_after) as min_balance_24h,
+                            MAX(balance_after) as max_balance_24h,
+                            COUNT(*) as trades_24h
+                        FROM trading_history 
+                        WHERE timestamp > NOW() - INTERVAL '24 hours'
+                          AND balance_after IS NOT NULL
+                    ''')
+                    
+                    # Get 1 week performance  
+                    result_1w = await conn.fetchrow('''
+                        SELECT 
+                            MIN(balance_after) as min_balance_1w,
+                            MAX(balance_after) as max_balance_1w,
+                            COUNT(*) as trades_1w
+                        FROM trading_history 
+                        WHERE timestamp > NOW() - INTERVAL '1 week'
+                          AND balance_after IS NOT NULL
+                    ''')
+                    
+                    # Get first trade balance for overall calculation
+                    first_trade = await conn.fetchrow('''
+                        SELECT balance_before, timestamp as start_time
+                        FROM trading_history 
+                        WHERE balance_before IS NOT NULL
+                        ORDER BY timestamp ASC 
+                        LIMIT 1
+                    ''')
+                    
+                    # Get latest trade balance
+                    latest_trade = await conn.fetchrow('''
+                        SELECT balance_after, timestamp as latest_time
+                        FROM trading_history 
+                        WHERE balance_after IS NOT NULL
+                        ORDER BY timestamp DESC 
+                        LIMIT 1
+                    ''')
+                    
+                    # Calculate 24h performance
+                    if result_24h and result_24h['min_balance_24h'] and result_24h['max_balance_24h']:
+                        performance_24h = ((float(result_24h['max_balance_24h']) - float(result_24h['min_balance_24h'])) / float(result_24h['min_balance_24h'])) * 100
+                        performance_data["performance_24h"] = round(performance_24h, 2)
+                        performance_data["trades_24h"] = result_24h['trades_24h']
+                    else:
+                        performance_data["performance_24h"] = 0
+                        performance_data["trades_24h"] = 0
+                    
+                    # Calculate 1 week performance
+                    if result_1w and result_1w['min_balance_1w'] and result_1w['max_balance_1w']:
+                        performance_1w = ((float(result_1w['max_balance_1w']) - float(result_1w['min_balance_1w'])) / float(result_1w['min_balance_1w'])) * 100
+                        performance_data["performance_1w"] = round(performance_1w, 2)
+                        performance_data["trades_1w"] = result_1w['trades_1w']
+                    else:
+                        performance_data["performance_1w"] = 0
+                        performance_data["trades_1w"] = 0
+                    
+                    # Calculate overall performance from first to latest trade
+                    if first_trade and latest_trade and first_trade['balance_before'] and latest_trade['balance_after']:
+                        overall_performance = ((float(latest_trade['balance_after']) - float(first_trade['balance_before'])) / float(first_trade['balance_before'])) * 100
+                        performance_data["overall_performance"] = round(overall_performance, 2)
+                        performance_data["trading_start_time"] = first_trade['start_time'].isoformat()
+                        performance_data["latest_trade_time"] = latest_trade['latest_time'].isoformat()
+                    else:
+                        performance_data["overall_performance"] = 0
+                        performance_data["trading_start_time"] = None
+                        performance_data["latest_trade_time"] = None
+                        
+            except Exception as e:
+                logger.error(f"Error fetching performance metrics from database: {e}")
+                performance_data["performance_24h"] = 0
+                performance_data["performance_1w"] = 0
+                performance_data["overall_performance"] = 0
+                performance_data["trades_24h"] = 0
+                performance_data["trades_1w"] = 0
+        else:
+            # No database connection - use basic metrics
+            performance_data["performance_24h"] = 0
+            performance_data["performance_1w"] = 0
+            performance_data["overall_performance"] = performance_data["total_return_percent"]
+            performance_data["trades_24h"] = 0
+            performance_data["trades_1w"] = 0
+        
+        return performance_data
+        
+    except Exception as e:
+        logger.error(f"Error getting trading performance: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get performance metrics: {str(e)}")
+
 @app.get("/api/settings")
 async def get_settings():
     """Get trading settings"""

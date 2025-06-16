@@ -20,6 +20,7 @@ import { format } from 'date-fns';
 import ChartIndicators from '../components/ChartIndicators';
 import AIAnalysisConsole from '../components/AIAnalysisConsole';
 import DataFrequencyControl from '../components/DataFrequencyControl';
+import TradingPerformanceDashboard from '../components/TradingPerformanceDashboard';
 import config from '../config';
 
 function Dashboard() {
@@ -728,6 +729,9 @@ function Dashboard() {
       <Typography variant="h4" component="h1" gutterBottom>
         Trading Dashboard
       </Typography>
+
+      {/* Trading Performance Dashboard */}
+      <TradingPerformanceDashboard />
 
       <Grid container spacing={3}>
         {/* Chart */}
