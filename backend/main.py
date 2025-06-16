@@ -12,6 +12,7 @@ from services.mexc_service import MexcService
 from services.trading_strategy import TradingStrategy
 from services.ai_analysis import AITradingAnalysis
 from services.mexc_websocket import mexc_ws_service
+from services.database_service import DatabaseService
 import time
 
 # Configure logging
@@ -47,6 +48,7 @@ trading_state = {
     "mexc_service": None,
     "trading_strategy": None,
     "ai_analysis": AITradingAnalysis(),
+    "database_service": DatabaseService(),
     "auto_analysis_enabled": True,  # Start AI analysis by default
     "auto_trading_enabled": False  # Auto trading is paused by default
 }
@@ -132,6 +134,15 @@ async def update_market_data():
             price = trading_state["mexc_service"].get_btc_price()
             trading_state["last_price"] = price
 
+            # Log price to database (every 10th update to avoid spam)
+            if hasattr(update_market_data, 'price_log_counter'):
+                update_market_data.price_log_counter += 1
+            else:
+                update_market_data.price_log_counter = 1
+            
+            if update_market_data.price_log_counter % 10 == 0:
+                await trading_state["database_service"].log_price(price)
+
             # Get klines for technical analysis
             klines = trading_state["mexc_service"].get_klines(interval='1m', limit=100)
             indicators = trading_state["trading_strategy"].calculate_indicators(klines)
@@ -150,6 +161,18 @@ async def update_market_data():
                     quantity = (usdt_balance * 0.95) / price  # Use 95% of balance
                     order = trading_state["mexc_service"].place_order('BUY', quantity, price=price)
                     logger.info(f"Placed BUY order: {order}")
+                    
+                    # Log trade to database
+                    await trading_state["database_service"].log_trade(
+                        action="BUY",
+                        price=price,
+                        quantity=quantity,
+                        balance_before=usdt_balance + (btc_balance * price),
+                        balance_after=(usdt_balance * 0.05) + ((btc_balance + quantity) * price),
+                        order_id=order.get('orderId') if order else None,
+                        metadata={"confidence": confidence, "indicators": indicators}
+                    )
+                    
                     trading_state["trades"].append({
                         "type": "BUY",
                         "price": price,
@@ -161,6 +184,18 @@ async def update_market_data():
                 elif action == 'SELL' and btc_balance > 0:
                     order = trading_state["mexc_service"].place_order('SELL', btc_balance, price=price)
                     logger.info(f"Placed SELL order: {order}")
+                    
+                    # Log trade to database
+                    await trading_state["database_service"].log_trade(
+                        action="SELL",
+                        price=price,
+                        quantity=btc_balance,
+                        balance_before=usdt_balance + (btc_balance * price),
+                        balance_after=(usdt_balance + (btc_balance * price)),
+                        order_id=order.get('orderId') if order else None,
+                        metadata={"confidence": confidence, "indicators": indicators}
+                    )
+                    
                     trading_state["trades"].append({
                         "type": "SELL",
                         "price": price,
@@ -208,6 +243,17 @@ async def ai_analysis_task():
             # Perform AI analysis
             analysis = trading_state["ai_analysis"].analyze_market(klines_15m, current_price)
             
+            # Log AI analysis to database
+            ai_decision = analysis.get('ai_decision', {})
+            await trading_state["database_service"].log_ai_analysis(
+                current_price=current_price,
+                recommendation=ai_decision.get('action', 'HOLD'),
+                confidence=analysis.get('confidence_score', 0),
+                reasoning=ai_decision.get('reasoning', ''),
+                technical_indicators=analysis.get('technical_analysis', {}),
+                metadata=analysis
+            )
+            
             # Broadcast AI analysis to all connected clients
             for connection in active_connections:
                 try:
@@ -231,6 +277,16 @@ async def startup_event():
     global ai_analysis_task_ref
     
     try:
+        # Initialize database connection
+        db_connected = await trading_state["database_service"].connect()
+        if db_connected:
+            logger.info("✅ Connected to Supabase database successfully")
+            await trading_state["database_service"].log_system_event(
+                "INFO", "startup", "Trading bot started successfully"
+            )
+        else:
+            logger.warning("⚠️ Database connection failed - continuing without database logging")
+        
         # Start WebSocket connection for real-time data
         await mexc_ws_service.connect()
         
@@ -258,6 +314,16 @@ async def startup_event():
 async def shutdown_event():
     """Clean shutdown of background tasks"""
     global ai_analysis_task_ref
+    
+    # Log shutdown event
+    try:
+        await trading_state["database_service"].log_system_event(
+            "INFO", "shutdown", "Trading bot shutting down"
+        )
+        await trading_state["database_service"].disconnect()
+        logger.info("Database connection closed")
+    except Exception as e:
+        logger.error(f"Error during database shutdown: {e}")
     
     # Disconnect WebSocket
     await mexc_ws_service.disconnect()

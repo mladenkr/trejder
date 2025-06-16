@@ -123,10 +123,26 @@ Perfect for **periodic trading** (every 5-15 minutes):
 5. **PythonAnywhere** - Limited free tier
 
 ### Database Options:
-1. **PlanetScale** - 1GB free MySQL
-2. **Supabase** - 500MB free PostgreSQL
+1. **Supabase** - 500MB free PostgreSQL (Recommended)
+2. **PlanetScale** - 1GB free MySQL
 3. **MongoDB Atlas** - 512MB free
 4. **Firebase** - 1GB free NoSQL
+
+### Step 3: Set up Supabase Database (Recommended)
+
+1. **Create Supabase Account**: Go to [supabase.com](https://supabase.com)
+2. **Create New Project**: 
+   - Click "New Project"
+   - Choose organization
+   - Enter project name: `trejder-btc-bot`
+   - Set database password (save this!)
+   - Select region closest to your Railway deployment
+3. **Get Database URL**:
+   - Go to Settings → Database
+   - Copy the "Connection string" (URI format)
+   - It looks like: `postgresql://postgres:[password]@[host]:5432/postgres`
+4. **Add to Railway Environment Variables**:
+   - `DATABASE_URL`: Your Supabase connection string
 
 ## Environment Variables
 
