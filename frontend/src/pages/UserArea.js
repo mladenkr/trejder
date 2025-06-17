@@ -38,19 +38,21 @@ import mexcApiService from '../services/mexcApi';
 
 function UserArea() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [apiKey, setApiKey] = useState('');
   const [apiSecret, setApiSecret] = useState('');
   const [isTrading, setIsTrading] = useState(false);
   const [autoTradingEnabled, setAutoTradingEnabled] = useState(false);
-      const [accountBalance, setAccountBalance] = useState({
-        usdcBalance: 0,
-        totalUsdValue: 0,
-        usdBreakdown: { usdc: 0, crypto: 0 },
-        loading: false,
-        error: null
-    });
+  const [accountBalance, setAccountBalance] = useState({
+    usdcBalance: 0,
+    totalUsdValue: 0,
+    usdBreakdown: { usdc: 0, crypto: 0 },
+    loading: false,
+    error: null
+  });
   const [settings, setSettings] = useState({
-            trading_pair: 'BTCUSDC',
+    trading_pair: 'BTCUSDC',
     timeframe: '1m',
     balance_percentage: 100, // % of balance to use for trading
     enable_indicators: true,
@@ -64,11 +66,21 @@ function UserArea() {
 
   // Check authentication on component mount
   useEffect(() => {
+    console.log('🔍 UserArea: Component mounting, checking authentication...');
+    
     const checkAuth = () => {
-      if (validateSession()) {
-        setIsAuthenticated(true);
-      } else {
+      try {
+        console.log('🔍 UserArea: Validating session...');
+        const isValid = validateSession();
+        console.log('🔍 UserArea: Session validation result:', isValid);
+        
+        setIsAuthenticated(isValid);
+        setLoading(false);
+      } catch (err) {
+        console.error('🔴 UserArea: Error during authentication check:', err);
+        setError(`Authentication error: ${err.message}`);
         setIsAuthenticated(false);
+        setLoading(false);
       }
     };
 
@@ -119,7 +131,7 @@ function UserArea() {
     setIsAuthenticated(false);
     setApiKey('');
     setApiSecret('');
-                    setAccountBalance({ usdcBalance: 0, totalUsdValue: 0, usdBreakdown: { usdc: 0, crypto: 0 }, loading: false, error: null });
+    setAccountBalance({ usdcBalance: 0, totalUsdValue: 0, usdBreakdown: { usdc: 0, crypto: 0 }, loading: false, error: null });
   };
 
   const handleSettingsChange = (event) => {
@@ -247,6 +259,31 @@ function UserArea() {
     }
   };
 
+  // Show loading spinner while checking authentication
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  // Show error if there's an authentication error
+  if (error) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error">
+          <Typography variant="h6">Error</Typography>
+          <Typography>{error}</Typography>
+          <Button onClick={() => window.location.reload()} sx={{ mt: 2 }}>
+            Reload Page
+          </Button>
+        </Alert>
+      </Box>
+    );
+  }
+
+  // Show login if not authenticated
   if (!isAuthenticated) {
     return <Login onLogin={handleLogin} />;
   }
@@ -431,113 +468,113 @@ function UserArea() {
                     Basic Settings
                   </Typography>
                 </Grid>
-                                 <Grid item xs={12} md={6}>
-                   <TradingPairSelector
-                     value={settings.trading_pair}
-                     onChange={(newValue) => handleSettingsChange({ target: { name: 'trading_pair', value: newValue } })}
-                   />
-                 </Grid>
-                 <Grid item xs={12} md={6}>
-                   <FormControl fullWidth>
-                     <InputLabel>Timeframe</InputLabel>
-                     <Select
-                       name="timeframe"
-                       value={settings.timeframe}
-                       onChange={handleSettingsChange}
-                       label="Timeframe"
-                     >
-                       <MenuItem value="1m">1 Minute</MenuItem>
-                       <MenuItem value="5m">5 Minutes</MenuItem>
-                       <MenuItem value="15m">15 Minutes</MenuItem>
-                       <MenuItem value="1h">1 Hour</MenuItem>
-                       <MenuItem value="4h">4 Hours</MenuItem>
-                       <MenuItem value="1d">1 Day</MenuItem>
-                     </Select>
-                   </FormControl>
-                 </Grid>
+                <Grid item xs={12} md={6}>
+                  <TradingPairSelector
+                    value={settings.trading_pair}
+                    onChange={(newValue) => handleSettingsChange({ target: { name: 'trading_pair', value: newValue } })}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Timeframe</InputLabel>
+                    <Select
+                      name="timeframe"
+                      value={settings.timeframe}
+                      onChange={handleSettingsChange}
+                      label="Timeframe"
+                    >
+                      <MenuItem value="1m">1 Minute</MenuItem>
+                      <MenuItem value="5m">5 Minutes</MenuItem>
+                      <MenuItem value="15m">15 Minutes</MenuItem>
+                      <MenuItem value="1h">1 Hour</MenuItem>
+                      <MenuItem value="4h">4 Hours</MenuItem>
+                      <MenuItem value="1d">1 Day</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
 
-                                 {/* Trading Parameters */}
-                 <Grid item xs={12}>
-                   <Divider sx={{ mt: 2, mb: 2 }} />
-                   <Typography variant="h6" gutterBottom>
-                     Trading Parameters
-                   </Typography>
-                 </Grid>
-                 <Grid item xs={12} md={6}>
-                   <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
-                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                       <Typography variant="subtitle2">
-                         Total Account Balance (USD)
-                       </Typography>
-                       {apiKey && apiSecret && (
-                         <Button
-                           size="small"
-                           onClick={fetchAccountBalance}
-                           disabled={accountBalance.loading}
-                           variant="outlined"
-                         >
-                           Refresh
-                         </Button>
-                       )}
-                     </Box>
-                     {accountBalance.loading ? (
-                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                         <CircularProgress size={16} />
-                         <Typography variant="body2" color="textSecondary">
-                           Fetching balance...
-                         </Typography>
-                       </Box>
-                     ) : accountBalance.error ? (
-                       <Typography variant="body2" color="error">
-                         {accountBalance.error}
-                       </Typography>
-                     ) : (
-                       <Box>
-                         <Typography variant="h6" color="success.main">
-                           ${accountBalance.totalUsdValue.toFixed(2)}
-                         </Typography>
-                         {accountBalance.totalUsdValue > 0 && (
-                           <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
-                             USDC: ${accountBalance.usdBreakdown.usdc.toFixed(2)} | 
-                             Crypto: ${accountBalance.usdBreakdown.crypto.toFixed(2)}
-                           </Typography>
-                         )}
-                       </Box>
-                     )}
-                     {!apiKey && (
-                       <Typography variant="caption" color="textSecondary">
-                         Enter API keys to fetch real balance
-                       </Typography>
-                     )}
-                   </Box>
-                 </Grid>
-                 <Grid item xs={12} md={6}>
-                   <TextField
-                     fullWidth
-                     label="Balance Usage (%)"
-                     name="balance_percentage"
-                     type="number"
-                     value={settings.balance_percentage}
-                     onChange={handleSettingsChange}
-                     inputProps={{ min: 1, max: 100 }}
-                     helperText={`Using ${settings.balance_percentage}% of account balance for trading${accountBalance.totalUsdValue > 0 ? ` (~$${(accountBalance.totalUsdValue * settings.balance_percentage / 100).toFixed(2)})` : ''}`}
-                   />
-                 </Grid>
+                {/* Trading Parameters */}
+                <Grid item xs={12}>
+                  <Divider sx={{ mt: 2, mb: 2 }} />
+                  <Typography variant="h6" gutterBottom>
+                    Trading Parameters
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                      <Typography variant="subtitle2">
+                        Total Account Balance (USD)
+                      </Typography>
+                      {apiKey && apiSecret && (
+                        <Button
+                          size="small"
+                          onClick={fetchAccountBalance}
+                          disabled={accountBalance.loading}
+                          variant="outlined"
+                        >
+                          Refresh
+                        </Button>
+                      )}
+                    </Box>
+                    {accountBalance.loading ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CircularProgress size={16} />
+                        <Typography variant="body2" color="textSecondary">
+                          Fetching balance...
+                        </Typography>
+                      </Box>
+                    ) : accountBalance.error ? (
+                      <Typography variant="body2" color="error">
+                        {accountBalance.error}
+                      </Typography>
+                    ) : (
+                      <Box>
+                        <Typography variant="h6" color="success.main">
+                          ${(accountBalance.totalUsdValue || 0).toFixed(2)}
+                        </Typography>
+                        {(accountBalance.totalUsdValue || 0) > 0 && (
+                          <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
+                            USDC: ${(accountBalance.usdBreakdown?.usdc || 0).toFixed(2)} | 
+                            Crypto: ${(accountBalance.usdBreakdown?.crypto || 0).toFixed(2)}
+                          </Typography>
+                        )}
+                      </Box>
+                    )}
+                    {!apiKey && (
+                      <Typography variant="caption" color="textSecondary">
+                        Enter API keys to fetch real balance
+                      </Typography>
+                    )}
+                  </Box>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Balance Usage (%)"
+                    name="balance_percentage"
+                    type="number"
+                    value={settings.balance_percentage}
+                    onChange={handleSettingsChange}
+                    inputProps={{ min: 1, max: 100 }}
+                    helperText={`Using ${settings.balance_percentage}% of account balance for trading${(accountBalance.totalUsdValue || 0) > 0 ? ` (~$${((accountBalance.totalUsdValue || 0) * settings.balance_percentage / 100).toFixed(2)})` : ''}`}
+                  />
+                </Grid>
 
                 {/* Trading Strategy Explanation */}
                 <Grid item xs={12}>
-                   <Alert severity="info" sx={{ mt: 2 }}>
-                     <Typography variant="body2" gutterBottom>
-                       <strong>📈 Auto Trading Strategy:</strong>
-                     </Typography>
-                     <Typography variant="body2">
-                       • <strong>LONG Signal</strong>: Bot buys and holds the selected crypto with specified % of USDC balance<br/>
-                       • <strong>EXIT Signal</strong>: Bot sells all crypto back to USDC<br/>
-                       • <strong>Continuous</strong>: Process repeats automatically based on AI analysis<br/>
-                       • <strong>No Stop Loss/Take Profit</strong>: Strategy relies purely on AI signals for entry/exit
-                     </Typography>
-                   </Alert>
-                 </Grid>
+                  <Alert severity="info" sx={{ mt: 2 }}>
+                    <Typography variant="body2" gutterBottom>
+                      <strong>📈 Auto Trading Strategy:</strong>
+                    </Typography>
+                    <Typography variant="body2">
+                      • <strong>LONG Signal</strong>: Bot buys and holds the selected crypto with specified % of USDC balance<br/>
+                      • <strong>EXIT Signal</strong>: Bot sells all crypto back to USDC<br/>
+                      • <strong>Continuous</strong>: Process repeats automatically based on AI analysis<br/>
+                      • <strong>No Stop Loss/Take Profit</strong>: Strategy relies purely on AI signals for entry/exit
+                    </Typography>
+                  </Alert>
+                </Grid>
 
                 {/* Technical Indicators */}
                 <Grid item xs={12}>
