@@ -27,7 +27,7 @@ class MexcService:
     def _make_request(self, method: str, endpoint: str, params: Optional[Dict] = None, signed: bool = False) -> Dict:
         """Make HTTP request to MEXC API"""
         url = f"{self.base_url}{endpoint}"
-        headers = {'Content-Type': 'application/json'}
+        headers = {}
         
         if signed:
             if params is None:
@@ -40,7 +40,9 @@ class MexcService:
             if method == 'GET':
                 response = requests.get(url, params=params, headers=headers)
             elif method == 'POST':
-                response = requests.post(url, json=params, headers=headers)
+                # For POST requests (like orders), send as form data, not JSON
+                headers['Content-Type'] = 'application/x-www-form-urlencoded'
+                response = requests.post(url, data=params, headers=headers)
             elif method == 'DELETE':
                 response = requests.delete(url, params=params, headers=headers)
             else:
@@ -49,6 +51,13 @@ class MexcService:
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
+            # Log the response content for debugging
+            if hasattr(e, 'response') and e.response is not None:
+                try:
+                    error_content = e.response.json()
+                    raise Exception(f"API request failed: {str(e)} - Response: {error_content}")
+                except:
+                    raise Exception(f"API request failed: {str(e)} - Response: {e.response.text}")
             raise Exception(f"API request failed: {str(e)}")
 
     def get_btc_price(self) -> float:
@@ -76,7 +85,8 @@ class MexcService:
         params = {
             'symbol': 'BTCUSDC',
             'side': side,
-            'type': order_type
+            'type': order_type,
+            'recvWindow': 5000  # Add recvWindow for better API reliability
         }
         
         # For MARKET BUY orders with quote_qty, use quoteOrderQty
