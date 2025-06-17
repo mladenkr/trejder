@@ -54,7 +54,7 @@ class MexcService:
     def get_btc_price(self) -> float:
         """Get current BTC price"""
         endpoint = "/api/v3/ticker/price"
-        params = {'symbol': 'BTCUSDT'}
+        params = {'symbol': 'BTCUSDC'}
         response = self._make_request('GET', endpoint, params)
         return float(response['price'])
 
@@ -74,7 +74,7 @@ class MexcService:
         """
         endpoint = "/api/v3/order"
         params = {
-            'symbol': 'BTCUSDT',
+            'symbol': 'BTCUSDC',
             'side': side,
             'type': order_type
         }
@@ -108,7 +108,7 @@ class MexcService:
         """
         endpoint = "/api/v3/klines"
         params = {
-            'symbol': 'BTCUSDT',
+            'symbol': 'BTCUSDC',
             'interval': interval,
             'limit': min(limit, 1000)  # MEXC has a limit of 1000
         }
@@ -117,14 +117,14 @@ class MexcService:
     def get_open_orders(self) -> List:
         """Get all open orders"""
         endpoint = "/api/v3/openOrders"
-        params = {'symbol': 'BTCUSDT'}
+        params = {'symbol': 'BTCUSDC'}
         return self._make_request('GET', endpoint, params, signed=True)
 
     def cancel_order(self, order_id: str) -> Dict:
         """Cancel an order"""
         endpoint = "/api/v3/order"
         params = {
-            'symbol': 'BTCUSDT',
+            'symbol': 'BTCUSDC',
             'orderId': order_id
         }
         return self._make_request('DELETE', endpoint, params, signed=True)
@@ -133,7 +133,7 @@ class MexcService:
         """Get order status"""
         endpoint = "/api/v3/order"
         params = {
-            'symbol': 'BTCUSDT',
+            'symbol': 'BTCUSDC',
             'orderId': order_id
         }
         return self._make_request('GET', endpoint, params, signed=True)
@@ -142,7 +142,7 @@ class MexcService:
         """Get account trade history"""
         endpoint = "/api/v3/myTrades"
         params = {
-            'symbol': 'BTCUSDT',
+            'symbol': 'BTCUSDC',
             'limit': min(limit, 1000)  # MEXC has a limit of 1000
         }
         return self._make_request('GET', endpoint, params, signed=True)
@@ -155,14 +155,14 @@ class MexcService:
     def get_24hr_ticker(self) -> Dict:
         """Get 24hr price change statistics"""
         endpoint = "/api/v3/ticker/24hr"
-        params = {'symbol': 'BTCUSDT'}
+        params = {'symbol': 'BTCUSDC'}
         return self._make_request('GET', endpoint, params)
 
     def get_order_book(self, limit: int = 100) -> Dict:
         """Get order book"""
         endpoint = "/api/v3/depth"
         params = {
-            'symbol': 'BTCUSDT',
+            'symbol': 'BTCUSDC',
             'limit': min(limit, 5000)  # MEXC has a limit of 5000
         }
         return self._make_request('GET', endpoint, params) 

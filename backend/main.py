@@ -153,36 +153,36 @@ async def update_market_data():
                 try:
                     # Get current balance
                     balance = trading_state["mexc_service"].get_account_balance()
-                    usdt_balance = float(next((asset['free'] for asset in balance['balances'] if asset['asset'] == 'USDT'), 0))
+                    usdc_balance = float(next((asset['free'] for asset in balance['balances'] if asset['asset'] == 'USDC'), 0))
                     btc_balance = float(next((asset['free'] for asset in balance['balances'] if asset['asset'] == 'BTC'), 0))
                     
-                    logger.info(f"💰 Current Balance - USDT: {usdt_balance}, BTC: {btc_balance}")
+                    logger.info(f"💰 Current Balance - USDC: {usdc_balance}, BTC: {btc_balance}")
 
-                    if action == 'BUY' and usdt_balance > 0:
-                        # For MARKET BUY orders, use USDT amount (quoteOrderQty) instead of BTC quantity
-                        usdt_amount = round(usdt_balance * 0.95, 2)  # Use 95% of balance, round to 2 decimals
+                    if action == 'BUY' and usdc_balance > 0:
+                        # For MARKET BUY orders, use USDC amount (quoteOrderQty) instead of BTC quantity
+                        usdc_amount = round(usdc_balance * 0.95, 2)  # Use 95% of balance, round to 2 decimals
                         
                         # Check minimum order value (MEXC minimum is usually $5)
-                        if usdt_amount < 5:
-                            logger.warning(f"⚠️ BUY order value ${usdt_amount} below minimum ($5). USDT balance: {usdt_balance}")
+                        if usdc_amount < 5:
+                            logger.warning(f"⚠️ BUY order value ${usdc_amount} below minimum ($5). USDC balance: {usdc_balance}")
                             continue
                         
-                        logger.info(f"📊 BUY Order Details - USDT Amount: ${usdt_amount}, Price: {price}, Expected BTC: {usdt_amount/price:.6f}")
+                        logger.info(f"📊 BUY Order Details - USDC Amount: ${usdc_amount}, Price: {price}, Expected BTC: {usdc_amount/price:.6f}")
                         
-                        # Use MARKET order with quoteOrderQty (USDT amount)
-                        order = trading_state["mexc_service"].place_order('BUY', quantity=0, order_type='MARKET', quote_qty=usdt_amount)
+                        # Use MARKET order with quoteOrderQty (USDC amount)
+                        order = trading_state["mexc_service"].place_order('BUY', quantity=0, order_type='MARKET', quote_qty=usdc_amount)
                         logger.info(f"✅ BUY ORDER PLACED: {order}")
                         
                         # Calculate the actual BTC quantity received
-                        btc_quantity = usdt_amount / price
+                        btc_quantity = usdc_amount / price
                         
                         # Log trade to database
                         await trading_state["database_service"].log_trade(
                             action="BUY",
                             price=price,
                             quantity=btc_quantity,
-                            balance_before=usdt_balance + (btc_balance * price),
-                            balance_after=(usdt_balance * 0.05) + ((btc_balance + btc_quantity) * price),
+                            balance_before=usdc_balance + (btc_balance * price),
+                            balance_after=(usdc_balance * 0.05) + ((btc_balance + btc_quantity) * price),
                             order_id=order.get('orderId') if order else None,
                             metadata={"confidence": confidence, "indicators": indicators}
                         )
@@ -215,8 +215,8 @@ async def update_market_data():
                             action="SELL",
                             price=price,
                             quantity=quantity,
-                            balance_before=usdt_balance + (btc_balance * price),
-                            balance_after=(usdt_balance + (btc_balance * price)),
+                            balance_before=usdc_balance + (btc_balance * price),
+                            balance_after=(usdc_balance + (btc_balance * price)),
                             order_id=order.get('orderId') if order else None,
                             metadata={"confidence": confidence, "indicators": indicators}
                         )
@@ -230,7 +230,7 @@ async def update_market_data():
                         trading_state["trading_strategy"].update_position('SELL')
                     
                     else:
-                        logger.warning(f"⚠️ Cannot execute {action} - USDT Balance: {usdt_balance}, BTC Balance: {btc_balance}")
+                        logger.warning(f"⚠️ Cannot execute {action} - USDC Balance: {usdc_balance}, BTC Balance: {btc_balance}")
                         
                 except Exception as e:
                     logger.error(f"❌ TRADE EXECUTION FAILED: {e}")
@@ -238,9 +238,9 @@ async def update_market_data():
 
             # Update current balance
             balance = trading_state["mexc_service"].get_account_balance()
-            usdt_balance = float(next((asset['free'] for asset in balance['balances'] if asset['asset'] == 'USDT'), 0))
+            usdc_balance = float(next((asset['free'] for asset in balance['balances'] if asset['asset'] == 'USDC'), 0))
             btc_balance = float(next((asset['free'] for asset in balance['balances'] if asset['asset'] == 'BTC'), 0))
-            trading_state["current_balance"] = usdt_balance + (btc_balance * price)
+            trading_state["current_balance"] = usdc_balance + (btc_balance * price)
 
             # Broadcast update to all connected clients
             for connection in active_connections:
@@ -347,10 +347,10 @@ async def lifespan(app: FastAPI):
         await mexc_ws_service.connect()
         
         # Subscribe to real-time BTC price updates
-        await mexc_ws_service.subscribe_ticker("BTCUSDT", handle_ticker_update)
+        await mexc_ws_service.subscribe_ticker("BTCUSDC", handle_ticker_update)
         
         # Subscribe to real-time trade updates for immediate price changes
-        await mexc_ws_service.subscribe_trade("BTCUSDT", handle_trade_update)
+        await mexc_ws_service.subscribe_trade("BTCUSDC", handle_trade_update)
         
         if mexc_ws_service.fallback_mode:
             logger.info("MEXC WebSocket in fallback mode - using REST API polling")
@@ -427,18 +427,18 @@ async def start_trading(credentials: TradingCredentials, background_tasks: Backg
         balance = mexc_service.get_account_balance()
         logger.info(f"📊 Account balance response: {balance}")
         
-        usdt_balance = float(next((asset['free'] for asset in balance['balances'] if asset['asset'] == 'USDT'), 0))
+        usdc_balance = float(next((asset['free'] for asset in balance['balances'] if asset['asset'] == 'USDC'), 0))
         btc_balance = float(next((asset['free'] for asset in balance['balances'] if asset['asset'] == 'BTC'), 0))
         initial_price = mexc_service.get_btc_price()
         
-        logger.info(f"💵 USDT Balance: {usdt_balance}, BTC Balance: {btc_balance}, BTC Price: ${initial_price}")
+        logger.info(f"💵 USDC Balance: {usdc_balance}, BTC Balance: {btc_balance}, BTC Price: ${initial_price}")
         
         trading_state.update({
             "is_trading": True,
             "api_key": credentials.api_key,
             "api_secret": credentials.api_secret,
-            "initial_balance": usdt_balance + (btc_balance * initial_price),
-            "current_balance": usdt_balance + (btc_balance * initial_price),
+            "initial_balance": usdc_balance + (btc_balance * initial_price),
+            "current_balance": usdc_balance + (btc_balance * initial_price),
             "mexc_service": mexc_service,
             "trading_strategy": TradingStrategy()
         })
@@ -486,7 +486,7 @@ async def get_trading_status():
 
 @app.get("/api/klines")
 async def get_klines(interval: str = "1m", limit: int = 100):
-    """Get BTC/USDT kline data from MEXC API - Real-time WebSocket provides high-frequency price updates"""
+    """Get BTC/USDC kline data from MEXC API - Real-time WebSocket provides high-frequency price updates"""
     try:
         # Use MEXC API for all intervals (1m, 5m, 15m, etc.)
         mexc_service = MexcService("", "")
