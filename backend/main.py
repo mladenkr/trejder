@@ -70,7 +70,7 @@ async def handle_ticker_update(data):
                 "data": {
                     "price": price,
                     "timestamp": timestamp,
-                    "symbol": data.get('s', 'BTCUSDT'),
+                    "symbol": data.get('s', 'BTCUSDC'),
                     "volume": data.get('v', 0),
                     "change": data.get('P', 0),
                     "high": data.get('h', 0),
@@ -101,7 +101,7 @@ async def handle_trade_update(data):
                     "price": price,
                     "volume": volume,
                     "timestamp": timestamp,
-                    "symbol": data.get('s', 'BTCUSDT'),
+                    "symbol": data.get('s', 'BTCUSDC'),
                     "side": data.get('m', False)  # True = buyer is market maker
                 }
             }
