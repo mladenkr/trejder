@@ -18,7 +18,7 @@ import config from '../config';
 
 function Settings() {
   const [settings, setSettings] = useState({
-    trading_pair: 'BTC/USDT',
+            trading_pair: 'BTC/USDC',
     timeframe: '1m',
     initial_balance: 1000,
     max_position_size: 0.1,
@@ -115,7 +115,7 @@ function Settings() {
           <Grid item xs={12} md={4}>
             <TextField
               fullWidth
-              label="Initial Balance (USDT)"
+                                      label="Initial Balance (USDC)"
               name="initial_balance"
               type="number"
               value={settings.initial_balance}

@@ -25,11 +25,11 @@ function TradingPairSelector({ value, onChange, disabled = false }) {
     setError(null);
     
     try {
-      const pairs = await mexcApiService.fetchUSDTTradingPairs();
+                  const pairs = await mexcApiService.fetchUSDCTradingPairs();
       setTradingPairs(pairs);
       
       if (pairs.length > 0) {
-        console.log(`Loaded ${pairs.length} USDT trading pairs from MEXC`);
+        console.log(`Loaded ${pairs.length} USDC trading pairs from MEXC`);
       }
     } catch (error) {
       console.error('Error fetching trading pairs:', error);
@@ -75,7 +75,7 @@ function TradingPairSelector({ value, onChange, disabled = false }) {
             helperText={
               error ? error : 
               loading ? "Loading trading pairs..." :
-              `${tradingPairs.length} USDT pairs available`
+                                  `${tradingPairs.length} USDC pairs available`
             }
             error={!!error}
           />
@@ -92,7 +92,7 @@ function TradingPairSelector({ value, onChange, disabled = false }) {
                   {option.baseAsset} / {option.quoteAsset}
                 </Typography>
               </Box>
-              {option.symbol === 'BTCUSDT' && (
+                              {option.symbol === 'BTCUSDC' && (
                 <Chip 
                   label="Popular" 
                   size="small" 

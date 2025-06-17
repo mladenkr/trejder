@@ -42,15 +42,15 @@ function UserArea() {
   const [apiSecret, setApiSecret] = useState('');
   const [isTrading, setIsTrading] = useState(false);
   const [autoTradingEnabled, setAutoTradingEnabled] = useState(false);
-  const [accountBalance, setAccountBalance] = useState({
-    usdtBalance: 0,
-    totalUsdValue: 0,
-    usdBreakdown: { usdt: 0, crypto: 0 },
-    loading: false,
-    error: null
-  });
+      const [accountBalance, setAccountBalance] = useState({
+        usdcBalance: 0,
+        totalUsdValue: 0,
+        usdBreakdown: { usdc: 0, crypto: 0 },
+        loading: false,
+        error: null
+    });
   const [settings, setSettings] = useState({
-    trading_pair: 'BTCUSDT',
+            trading_pair: 'BTCUSDC',
     timeframe: '1m',
     balance_percentage: 100, // % of balance to use for trading
     enable_indicators: true,
@@ -119,7 +119,7 @@ function UserArea() {
     setIsAuthenticated(false);
     setApiKey('');
     setApiSecret('');
-    setAccountBalance({ usdtBalance: 0, totalUsdValue: 0, usdBreakdown: { usdt: 0, crypto: 0 }, loading: false, error: null });
+                    setAccountBalance({ usdcBalance: 0, totalUsdValue: 0, usdBreakdown: { usdc: 0, crypto: 0 }, loading: false, error: null });
   };
 
   const handleSettingsChange = (event) => {
@@ -143,9 +143,9 @@ function UserArea() {
   const fetchAccountBalance = async () => {
     if (!apiKey || !apiSecret) {
       setAccountBalance({
-        usdtBalance: 0,
+        usdcBalance: 0,
         totalUsdValue: 0,
-        usdBreakdown: { usdt: 0, crypto: 0 },
+        usdBreakdown: { usdc: 0, crypto: 0 },
         loading: false,
         error: 'API credentials required'
       });
@@ -159,7 +159,7 @@ function UserArea() {
       
       if (result.success) {
         setAccountBalance({
-          usdtBalance: result.usdtBalance,
+          usdcBalance: result.usdcBalance,
           totalUsdValue: result.totalUsdValue,
           usdBreakdown: result.usdBreakdown,
           loading: false,
@@ -172,9 +172,9 @@ function UserArea() {
         }
       } else {
         setAccountBalance({
-          usdtBalance: 0,
+          usdcBalance: 0,
           totalUsdValue: 0,
-          usdBreakdown: { usdt: 0, crypto: 0 },
+          usdBreakdown: { usdc: 0, crypto: 0 },
           loading: false,
           error: result.error
         });
@@ -182,9 +182,9 @@ function UserArea() {
     } catch (error) {
       console.error('Error fetching balance:', error);
       setAccountBalance({
-        usdtBalance: 0,
+        usdcBalance: 0,
         totalUsdValue: 0,
-        usdBreakdown: { usdt: 0, crypto: 0 },
+        usdBreakdown: { usdc: 0, crypto: 0 },
         loading: false,
         error: 'Failed to fetch balance'
       });
@@ -333,7 +333,7 @@ function UserArea() {
                           clearApiCredentials();
                           setApiKey('');
                           setApiSecret('');
-                          setAccountBalance({ usdtBalance: 0, loading: false, error: null });
+                          setAccountBalance({ usdcBalance: 0, loading: false, error: null });
                         }}
                         size="small"
                       >
@@ -498,7 +498,7 @@ function UserArea() {
                          </Typography>
                          {accountBalance.totalUsdValue > 0 && (
                            <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
-                             USDT: ${accountBalance.usdBreakdown.usdt.toFixed(2)} | 
+                             USDC: ${accountBalance.usdBreakdown.usdc.toFixed(2)} | 
                              Crypto: ${accountBalance.usdBreakdown.crypto.toFixed(2)}
                            </Typography>
                          )}
@@ -524,15 +524,15 @@ function UserArea() {
                    />
                  </Grid>
 
-                 {/* Trading Strategy Explanation */}
-                 <Grid item xs={12}>
+                {/* Trading Strategy Explanation */}
+                <Grid item xs={12}>
                    <Alert severity="info" sx={{ mt: 2 }}>
                      <Typography variant="body2" gutterBottom>
                        <strong>📈 Auto Trading Strategy:</strong>
                      </Typography>
                      <Typography variant="body2">
-                       • <strong>LONG Signal</strong>: Bot buys and holds the selected crypto with specified % of USDT balance<br/>
-                       • <strong>EXIT Signal</strong>: Bot sells all crypto back to USDT<br/>
+                       • <strong>LONG Signal</strong>: Bot buys and holds the selected crypto with specified % of USDC balance<br/>
+                       • <strong>EXIT Signal</strong>: Bot sells all crypto back to USDC<br/>
                        • <strong>Continuous</strong>: Process repeats automatically based on AI analysis<br/>
                        • <strong>No Stop Loss/Take Profit</strong>: Strategy relies purely on AI signals for entry/exit
                      </Typography>

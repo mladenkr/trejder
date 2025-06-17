@@ -7,16 +7,16 @@ class MexcApiService {
     this.baseURL = 'https://api.mexc.com';
   }
 
-  // Fetch all USDT trading pairs from MEXC
-  async fetchUSDTTradingPairs() {
+  // Fetch all USDC trading pairs from MEXC
+  async fetchUSDCTradingPairs() {
     try {
       // Use our backend as proxy to avoid CORS issues
       const response = await axios.get(`${config.API_URL}/api/mexc/symbols`);
       
       if (response.data && response.data.symbols) {
-        // Filter for USDT pairs and format them
-        const usdtPairs = response.data.symbols
-          .filter(symbol => symbol.symbol.endsWith('USDT'))
+        // Filter for USDC pairs and format them
+        const usdcPairs = response.data.symbols
+          .filter(symbol => symbol.symbol.endsWith('USDC'))
           .map(symbol => ({
             symbol: symbol.symbol,
             baseAsset: symbol.baseAsset,
@@ -26,7 +26,7 @@ class MexcApiService {
           .filter(pair => pair.status === 'ENABLED')
           .sort((a, b) => a.symbol.localeCompare(b.symbol));
 
-        return usdtPairs;
+        return usdcPairs;
       }
       
       return [];
@@ -34,14 +34,14 @@ class MexcApiService {
       console.error('Error fetching MEXC trading pairs:', error);
       // Return default pairs if API fails
       return [
-        { symbol: 'BTC/USDT', baseAsset: 'BTC', quoteAsset: 'USDT', status: 'ENABLED' },
-        { symbol: 'ETH/USDT', baseAsset: 'ETH', quoteAsset: 'USDT', status: 'ENABLED' },
-        { symbol: 'BNB/USDT', baseAsset: 'BNB', quoteAsset: 'USDT', status: 'ENABLED' },
-        { symbol: 'ADA/USDT', baseAsset: 'ADA', quoteAsset: 'USDT', status: 'ENABLED' },
-        { symbol: 'DOT/USDT', baseAsset: 'DOT', quoteAsset: 'USDT', status: 'ENABLED' },
-        { symbol: 'LINK/USDT', baseAsset: 'LINK', quoteAsset: 'USDT', status: 'ENABLED' },
-        { symbol: 'LTC/USDT', baseAsset: 'LTC', quoteAsset: 'USDT', status: 'ENABLED' },
-        { symbol: 'XRP/USDT', baseAsset: 'XRP', quoteAsset: 'USDT', status: 'ENABLED' },
+        { symbol: 'BTC/USDC', baseAsset: 'BTC', quoteAsset: 'USDC', status: 'ENABLED' },
+        { symbol: 'ETH/USDC', baseAsset: 'ETH', quoteAsset: 'USDC', status: 'ENABLED' },
+        { symbol: 'BNB/USDC', baseAsset: 'BNB', quoteAsset: 'USDC', status: 'ENABLED' },
+        { symbol: 'ADA/USDC', baseAsset: 'ADA', quoteAsset: 'USDC', status: 'ENABLED' },
+        { symbol: 'DOT/USDC', baseAsset: 'DOT', quoteAsset: 'USDC', status: 'ENABLED' },
+        { symbol: 'LINK/USDC', baseAsset: 'LINK', quoteAsset: 'USDC', status: 'ENABLED' },
+        { symbol: 'LTC/USDC', baseAsset: 'LTC', quoteAsset: 'USDC', status: 'ENABLED' },
+        { symbol: 'XRP/USDC', baseAsset: 'XRP', quoteAsset: 'USDC', status: 'ENABLED' },
       ];
     }
   }
@@ -55,16 +55,16 @@ class MexcApiService {
       });
 
       if (response.data && response.data.balances) {
-        // Find USDT balance
-        const usdtBalance = response.data.balances.find(
-          balance => balance.asset === 'USDT'
+        // Find USDC balance
+        const usdcBalance = response.data.balances.find(
+          balance => balance.asset === 'USDC'
         );
 
         return {
           success: true,
-          usdtBalance: usdtBalance ? parseFloat(usdtBalance.free) : 0,
+          usdcBalance: usdcBalance ? parseFloat(usdcBalance.free) : 0,
           totalUsdValue: response.data.total_usd_value || 0,
-          usdBreakdown: response.data.usd_breakdown || { usdt: 0, crypto: 0 },
+          usdBreakdown: response.data.usd_breakdown || { usdc: 0, crypto: 0 },
           allBalances: response.data.balances,
           usdBalances: response.data.usd_balances || []
         };
@@ -73,7 +73,7 @@ class MexcApiService {
       return {
         success: false,
         error: 'Invalid response format',
-        usdtBalance: 0,
+        usdcBalance: 0,
         totalUsdValue: 0
       };
     } catch (error) {
@@ -81,7 +81,7 @@ class MexcApiService {
       return {
         success: false,
         error: error.response?.data?.message || error.message,
-        usdtBalance: 0,
+        usdcBalance: 0,
         totalUsdValue: 0
       };
     }
